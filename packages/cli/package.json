@@ -1,0 +1,26 @@
+{
+    "name": "@ssh-box/cli",
+    "version": "1.0.0",
+    "main": "dist/index.js",
+    "bin": {
+        "ssh-box": "./dist/index.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js"
+    },
+    "dependencies": {
+        "@ssh-box/common": "*",
+        "axios": "^1.6.0",
+        "chalk": "^4.1.2",
+        "commander": "^11.1.0",
+        "conf": "^10.2.0",
+        "inquirer": "^8.2.5",
+        "ora": "^5.4.1"
+    },
+    "devDependencies": {
+        "@types/inquirer": "^9.0.7",
+        "@types/node": "^20.11.0",
+        "typescript": "^5.3.3"
+    }
+}
