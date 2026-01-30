@@ -6,9 +6,11 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
     }
     return config;
 });
@@ -17,11 +19,13 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         if (error.response?.status === 401 || error.response?.status === 403) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('email');
-            localStorage.removeItem('lastSync');
-            await db.clearAll();
-            window.location.href = '/';
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('email');
+                localStorage.removeItem('lastSync');
+                await db.clearAll();
+                window.location.href = '/';
+            }
         }
         return Promise.reject(error);
     }

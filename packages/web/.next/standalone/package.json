@@ -1,0 +1,11 @@
+{
+  "name": "ssh-box-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces",
+    "build": "npm run build --workspaces"
+  }
+}

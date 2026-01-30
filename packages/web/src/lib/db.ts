@@ -8,6 +8,7 @@ const DB_VERSION = 1;
 let dbPromise: Promise<IDBPDatabase>;
 
 function getDB() {
+    if (typeof window === 'undefined') return Promise.resolve(null as any);
     if (!dbPromise) {
         dbPromise = openDB(DB_NAME, DB_VERSION, {
             upgrade(db) {

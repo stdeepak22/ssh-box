@@ -13,30 +13,35 @@ COPY packages/web ./packages/web
 # Install all dependencies (reproducible build)
 RUN npm ci
 
-# Build common first (web depends on it)
+# Build common first
 WORKDIR /app/packages/common
 RUN npm run build
 
 # Build web app
 WORKDIR /app/packages/web
+ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
+# Stage 2: Run
+FROM node:18-alpine AS runner
 
-# Copy build artifacts to nginx public directory
-COPY --from=build /app/packages/web/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Custom nginx config to handle SPA routing if needed
-RUN echo "server { \
-    listen 80; \
-    location / { \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    try_files \$uri \$uri/ /index.html; \
-    } \
-    }" > /etc/nginx/conf.d/default.conf
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-EXPOSE 80
+# Create a non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-CMD ["nginx", "-g", "daemon off;"]
+# Copy standalone build
+COPY --from=build /app/packages/web/.next/standalone ./
+COPY --from=build /app/packages/web/.next/static ./packages/web/.next/static
+COPY --from=build /app/packages/web/public ./packages/web/public
+
+USER nextjs
+
+EXPOSE 3000
+
+# The standalone output includes a server.js file in the package directory
+CMD ["node", "packages/web/server.js"]
