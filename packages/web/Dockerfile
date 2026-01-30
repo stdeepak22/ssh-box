@@ -10,8 +10,8 @@ COPY package*.json ./
 COPY packages/common ./packages/common
 COPY packages/web ./packages/web
 
-# Install all dependencies
-RUN npm install
+# Install all dependencies (reproducible build)
+RUN npm ci
 
 # Build common first (web depends on it)
 WORKDIR /app/packages/common

@@ -9,8 +9,8 @@ COPY package*.json ./
 COPY packages/common ./packages/common
 COPY packages/backend ./packages/backend
 
-# Install dependencies (from root to link workspace)
-RUN npm install
+# Install dependencies (reproducible build)
+RUN npm ci
 
 # Build common
 WORKDIR /app/packages/common
