@@ -1,4 +1,3 @@
-import axios from 'axios';
 import inquirer from 'inquirer';
 import { getConfig, getBaseUrl } from '../config';
 import ora from 'ora';
@@ -13,7 +12,13 @@ export async function register() {
     const spinner = ora('Registering...').start();
     try {
         const baseUrl = getBaseUrl();
-        await axios.post(`${baseUrl}/auth/register`, { email, password });
+        await fetch(`${baseUrl}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
         spinner.succeed('Registered successfully! You can now login.');
     } catch (error: any) {
         spinner.fail(`Registration failed: ${error.response?.data?.error || error.message}`);
@@ -29,8 +34,15 @@ export async function login() {
     const spinner = ora('Logging in...').start();
     try {
         const baseUrl = getBaseUrl();
-        const { data } = await axios.post(`${baseUrl}/auth/login`, { email, password });
+        const res = await fetch(`${baseUrl}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
 
+        const data = await res.json();
         const config = getConfig();
         config.set('token', data.token);
         config.set('email', data.email);

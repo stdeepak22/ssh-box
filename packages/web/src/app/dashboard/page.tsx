@@ -90,6 +90,31 @@ export default function Dashboard() {
         router.push('/');
     };
 
+    const handleDelete = async (secret: Secret) => {
+        if (!confirm(`Are you sure you want to delete "${secret.name}" and all its versions?`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/secrets/${secret.id}`);
+            alert('Secret deleted successfully.');
+
+            // Update local state and cache
+            const updated = secrets.filter(s => s.id !== secret.id);
+            setSecrets(updated);
+            await db.saveSecrets(updated); // This will overwrite with the smaller list
+
+            if (selectedSecret?.id === secret.id) {
+                setSelectedSecret(null);
+                setDecryptedValue(null);
+                setMasterPassword('');
+            }
+        } catch (err: any) {
+            console.error(err);
+            alert(`Failed to delete: ${err.response?.data?.error || err.message}`);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 p-8 text-gray-900">
             <div className="max-w-4xl mx-auto">
@@ -117,19 +142,33 @@ export default function Dashboard() {
                             {secrets.map((s) => (
                                 <li
                                     key={s.id}
-                                    className={`p-3 rounded cursor-pointer hover:bg-indigo-50 ${selectedSecret?.id === s.id ? 'bg-indigo-100 border-l-4 border-indigo-500' : ''}`}
+                                    className={`p-3 rounded cursor-pointer hover:bg-indigo-50 flex justify-between items-center group ${selectedSecret?.id === s.id ? 'bg-indigo-100 border-l-4 border-indigo-500' : ''}`}
                                     onClick={() => {
                                         setSelectedSecret(s);
                                         setDecryptedValue(null);
                                         setMasterPassword('');
                                     }}
                                 >
-                                    <p className="font-medium">{s.name}</p>
-                                    <p className="text-xs text-gray-500">v{s.version}</p>
+                                    <div>
+                                        <p className="font-medium">{s.name}</p>
+                                        <p className="text-xs text-gray-500">v{s.version}</p>
+                                    </div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(s);
+                                        }}
+                                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="Delete secret"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
                                 </li>
                             ))}
                         </ul>
-                        {secrets.length === 0 && <p className="text-gray-500">No secrets found. Use the CLI to add some!</p>}
+                        {secrets.length === 0 && <p className="text-gray-500 mt-4">No secrets found. Use the CLI to add some!</p>}
                     </div>
 
                     <div className="md:col-span-2 bg-white shadow rounded-lg p-6">
