@@ -1,0 +1,48 @@
+# Tasks
+
+- [x] Analyze `ref-docs` and understand requirements <!-- id: 0 -->
+- [x] Create `implementation_plan.md` <!-- id: 1 -->
+- [x] Verify plan with user <!-- id: 2 -->
+- [x] Set up Monorepo Structure <!-- id: 3 -->
+    - [x] Initialize root package.json <!-- id: 4 -->
+    - [x] Create packages directory <!-- id: 5 -->
+    - [x] Configure workspaces <!-- id: 6 -->
+- [x] Implement `packages/common` <!-- id: 7 -->
+    - [x] Initialize package.json & tsconfig <!-- id: 11 -->
+    - [x] Implement `types.ts` <!-- id: 12 -->
+    - [x] Implement `crypto.ts` <!-- id: 13 -->
+- [x] Implement `packages/backend` <!-- id: 8 -->
+    - [x] Initialize package.json & deps <!-- id: 14 -->
+    - [x] Implement DynamoDB connection <!-- id: 15 -->
+    - [x] Implement Auth routes <!-- id: 16 -->
+    - [x] Implement Secret routes <!-- id: 17 -->
+    - [x] Dockerfile setup <!-- id: 18 -->
+- [x] Implement `packages/cli` <!-- id: 9 -->
+    - [x] Initialize package.json & deps <!-- id: 19 -->
+    - [x] Implement `init` command (setup) <!-- id: 20 -->
+    - [x] Implement `auth` (login/register) <!-- id: 21 -->
+    - [x] Implement `add` (encrypt/push) <!-- id: 22 -->
+    - [x] Implement `get` (pull/decrypt) <!-- id: 23 -->
+- [x] Verification <!-- id: 10 -->
+    - [x] Create `docker-compose.yml` <!-- id: 24 -->
+    - [x] Create `create-tables` script <!-- id: 25 -->
+    - [x] Run end-to-end test <!-- id: 26 -->
+- [x] Web App Implementation <!-- id: 27 -->
+    - [x] Refactor `common` to Web Crypto API <!-- id: 28 -->
+    - [x] Initialize `packages/web` (Vite + React) <!-- id: 29 -->
+    - [x] Implement Auth Pages (Login/Register) <!-- id: 30 -->
+    - [x] Implement Dashboard (List Secrets) <!-- id: 31 -->
+    - [x] Implement Add/View Secret Flow <!-- id: 32 -->
+- [x] Implement IndexedDB Caching <!-- id: 33 -->
+    - [x] Create `packages/web/src/lib/db.ts` for IndexedDB logic <!-- id: 34 -->
+    - [x] Update `Dashboard.tsx` to load from DB and sync with server <!-- id: 35 -->
+    - [x] Implement clear on logout logic <!-- id: 36 -->
+    - [x] Verify caching works on page refresh <!-- id: 37 -->
+- [x] Optimize Syncing Logic <!-- id: 38 -->
+    - [x] Implement 5-minute sync threshold in `Dashboard.tsx` <!-- id: 39 -->
+    - [x] Add manual "Refresh" button to Dashboard UI <!-- id: 40 -->
+    - [x] Update `lastSync` timestamp in `localStorage` on successful fetch <!-- id: 41 -->
+    - [x] Verify optimization reduces redundant API calls <!-- id: 42 -->
+- [x] Add Auth Guard to Dashboard <!-- id: 43 -->
+    - [x] Validate token on Dashboard mount <!-- id: 44 -->
+    - [x] Redirect to login if token is missing <!-- id: 45 -->
