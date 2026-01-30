@@ -1,7 +1,7 @@
 # Implementation Plan - D3 SSH Box MVP
 
 ## Goal
-Build a secure, cross-device SSH key vault with client-side encryption. The MVP will consist of a Backend API (DynamoDB) and a CLI tool.
+Build a secure, cross-device SSH Key Box with client-side encryption. The MVP will consist of a Backend API (DynamoDB) and a CLI tool.
 
 ## User Review Required
 > [!IMPORTANT]

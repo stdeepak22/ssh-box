@@ -1,5 +1,5 @@
 
-# D3 SSH Key Vault - PRD + SDD
+# D3 SSH Key Box - PRD + SDD
 
 ## Product Overview
 **Goal:** Provide secure, cross-device, encrypted storage for SSH keys and config data.
