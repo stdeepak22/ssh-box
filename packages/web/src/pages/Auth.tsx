@@ -31,6 +31,8 @@ export default function Auth() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white p-8 rounded shadow-md w-96">
+                <h1 className="text-3xl font-extrabold text-indigo-600 text-center mb-2">SSH Box</h1>
+                <p className="text-gray-500 text-center mb-6 text-sm">Secure SSH Key Management</p>
                 <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Login' : 'Register'}</h2>
                 {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
                 <form onSubmit={handleSubmit} className="space-y-4">

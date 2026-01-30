@@ -92,7 +92,7 @@ export default function Dashboard() {
         <div className="min-h-screen bg-gray-50 p-8">
             <div className="max-w-4xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">My Secrets</h1>
+                    <h1 className="text-3xl font-bold text-indigo-600">SSH Box</h1>
                     <div className="flex items-center space-x-4">
                         <button
                             onClick={() => fetchSecrets(true)}

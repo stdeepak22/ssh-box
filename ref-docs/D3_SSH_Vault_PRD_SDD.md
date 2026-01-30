@@ -85,9 +85,9 @@
 - Push new/updated secret → encrypt locally → send to API  
 - Commands example:
 \`\`\`bash
-sshvault add --name mykey --file ~/.ssh/id_rsa
-sshvault get --name mykey > ~/.ssh/id_rsa
-sshvault rollback --name mykey --version 2
+ssh-box add --name mykey --file ~/.ssh/id_rsa
+ssh-box get --name mykey > ~/.ssh/id_rsa
+ssh-box rollback --name mykey --version 2
 \`\`\`
 
 ### Web / Extension / VSCode Integration

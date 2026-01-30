@@ -1,4 +1,4 @@
-# Implementation Plan - D3 SSH Vault MVP
+# Implementation Plan - D3 SSH Box MVP
 
 ## Goal
 Build a secure, cross-device SSH key vault with client-side encryption. The MVP will consist of a Backend API (DynamoDB) and a CLI tool.
@@ -54,10 +54,10 @@ I propose a monorepo structure (using npm workspaces) to share code:
     - Run `npm run deploy` (requires AWS credentials).
     - Verify DynamoDB table creation in AWS Console.
 2.  **CLI End-to-End**:
-    - `sshvault register user@example.com`
-    - `sshvault login user@example.com`
+    - `ssh-box register user@example.com`
+    - `ssh-box login user@example.com`
     - `echo "secret-data" > test_key`
-    - `sshvault add --name test-key --file ./test_key`
+    - `ssh-box add --name test-key --file ./test_key`
     - `rm test_key`
-    - `sshvault get --name test-key`
+    - `ssh-box get --name test-key`
     - Verify output matches "secret-data".

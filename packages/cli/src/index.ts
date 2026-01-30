@@ -8,7 +8,7 @@ const program = new Command();
 
 program
     .name('ssh-box')
-    .description('Secure SSH Key Vault')
+    .description('SSH Box - Secure SSH Key Management')
     .version('1.0.0');
 
 program
