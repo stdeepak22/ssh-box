@@ -4,6 +4,7 @@ services:
     image: amazon/dynamodb-local
     ports:
       - "8000:8000"
+    user: root
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
     volumes:
       - ./dynamodb_data:/home/dynamodblocal/data
@@ -25,3 +26,12 @@ services:
       - JWT_SECRET=dev-secret
     depends_on:
       - dynamodb-local
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend

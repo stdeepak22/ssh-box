@@ -1,0 +1,35 @@
+# Tasks
+
+- [x] Analyze `ref-docs` and understand requirements <!-- id: 0 -->
+- [x] Create [implementation_plan.md](file:///home/deepak/.gemini/antigravity/brain/489b483c-7376-4b63-8240-690d0e81fc05/implementation_plan.md) <!-- id: 1 -->
+- [x] Verify plan with user <!-- id: 2 -->
+- [x] Set up Monorepo Structure <!-- id: 3 -->
+    - [x] Initialize root package.json <!-- id: 4 -->
+    - [x] Create packages directory <!-- id: 5 -->
+    - [x] Configure workspaces <!-- id: 6 -->
+- [x] Implement `packages/common` <!-- id: 7 -->
+    - [x] Initialize package.json & tsconfig <!-- id: 11 -->
+    - [x] Implement `types.ts` <!-- id: 12 -->
+    - [x] Implement `crypto.ts` <!-- id: 13 -->
+- [x] Implement `packages/backend` <!-- id: 8 -->
+    - [x] Initialize package.json & deps <!-- id: 14 -->
+    - [x] Implement DynamoDB connection <!-- id: 15 -->
+    - [x] Implement Auth routes <!-- id: 16 -->
+    - [x] Implement Secret routes <!-- id: 17 -->
+    - [x] Dockerfile setup <!-- id: 18 -->
+- [x] Implement `packages/cli` <!-- id: 9 -->
+    - [x] Initialize package.json & deps <!-- id: 19 -->
+    - [x] Implement `init` command (setup) <!-- id: 20 -->
+    - [x] Implement `auth` (login/register) <!-- id: 21 -->
+    - [x] Implement `add` (encrypt/push) <!-- id: 22 -->
+    - [x] Implement `get` (pull/decrypt) <!-- id: 23 -->
+- [x] Verification <!-- id: 10 -->
+    - [x] Create `docker-compose.yml` <!-- id: 24 -->
+    - [x] Create `create-tables` script <!-- id: 25 -->
+    - [x] Run end-to-end test <!-- id: 26 -->
+- [ ] Web App Implementation <!-- id: 27 -->
+    - [ ] Refactor `common` to Web Crypto API <!-- id: 28 -->
+    - [ ] Initialize `packages/web` (Vite + React) <!-- id: 29 -->
+    - [ ] Implement Auth Pages (Login/Register) <!-- id: 30 -->
+    - [ ] Implement Dashboard (List Secrets) <!-- id: 31 -->
+    - [ ] Implement Add/View Secret Flow <!-- id: 32 -->

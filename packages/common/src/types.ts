@@ -10,7 +10,10 @@ export interface Secret {
     userId: string;
     name: string;
     version: number;
-    encryptedData: string; // "salt:iv:ciphertext"
+    ciphertext: string;
+    salt: string;
+    iv: string;
+    metadata: any;
     createdAt: string;
     updatedAt: string;
 }
