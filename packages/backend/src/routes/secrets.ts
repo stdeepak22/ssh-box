@@ -1,54 +1,98 @@
 import express from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import { PutCommand, QueryCommand, GetCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
-import { docClient, USER_SECRETS_TABLE } from '../db';
+import { queryByPkSkPrefix, TableNames, PkSk, batchGetItems, putItem, getItem, updateItem } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-
+import { SecretMetadata, Secret } from '@ssh-box/common';
+import { unmarshall } from '@aws-sdk/util-dynamodb';
 const router = express.Router();
 
+
 router.use(authenticateToken);
+
+
+const getPk = (email: string) => `USER#${email}`
+const getMetaSK = (name?: string)=> {
+    let sk = `SW#`
+    if(name) {
+        sk = `${sk}${name}`;
+    }
+    return sk;
+}
+const getSecretSk = (name?: string, ver?: number) => {
+    let sk = "S#";
+    if(name){
+        sk = `${sk}${name}#`;
+    }
+    if(ver){
+        sk = `${sk}${ver}`;
+    }
+    return sk;
+}
+
+//const getSk = (name: string, ver: number) => `S#${name}#${ver}`;
+
+
+
+const getKeysMetadata = async (email: string) => {
+    const pk = getPk(email);
+    const resp = await queryByPkSkPrefix<SecretMetadata>({
+        table: TableNames.Secret,
+        pk,
+        sk_prefix: getMetaSK()
+    })
+
+    const secretKeysWithVersion: {
+        keys: PkSk[],
+        versions: {
+            [key: string]: number[]
+        },
+    } = {keys: [], versions: {}};
+
+    resp.forEach((item)=>{
+        const key = item.sk.split('#')[1]
+        secretKeysWithVersion.keys.push({
+            pk,
+            sk: getSecretSk(key, item.cv),
+        })
+        secretKeysWithVersion.versions[key] = item.v
+    })
+    console.log('secretKeysWithVersion', secretKeysWithVersion)
+    return secretKeysWithVersion;
+}
 
 // List all secrets (returns latest version of each)
 router.get('/', async (req: AuthRequest, res) => {
     try {
         const email = req.user!.email;
 
-        const command = new QueryCommand({
-            TableName: USER_SECRETS_TABLE,
-            KeyConditionExpression: 'user_id = :uid',
-            ExpressionAttributeValues: {
-                ':uid': email
-            }
+        const {keys, versions} = await getKeysMetadata(email);
+        let items: Secret[]= [];
+        if(keys.length){
+            const batchResp  = await batchGetItems<Secret>({
+                batchRequest: [{
+                    table: TableNames.Secret,
+                    keys: keys
+                }]
+            })
+            items = batchResp.batchResponse[0]?.items || items;
+        }
+
+
+        const result:any[] = [];
+        items.forEach((item: Secret) => {
+            const {name, v, text, salt, iv, meta, createdAt } = item;
+            const idx = versions[name].indexOf(v);
+
+            result.push({
+                name,
+                text,
+                salt,
+                iv,
+                meta,
+                createdAt,
+                version: idx,
+                versionCount: versions[name].length
+            });
         });
-
-        const response = await docClient.send(command);
-        const items = response.Items || [];
-
-        // Group by secret_id and find latest version + all versions
-        const secretsMap: Record<string, any> = {};
-        items.forEach(item => {
-            const id = item.secret_id.split('#')[0];
-            const itemVersion = item.version || 1;
-
-            if (!secretsMap[id]) {
-                secretsMap[id] = { ...item, id, allVersions: [itemVersion] };
-                secretsMap[id].version = itemVersion; // Ensure lowercase version is set
-            } else {
-                secretsMap[id].allVersions.push(itemVersion);
-                if (itemVersion > secretsMap[id].version) {
-                    const { allVersions } = secretsMap[id];
-                    secretsMap[id] = { ...item, id, allVersions };
-                    secretsMap[id].version = itemVersion;
-                }
-            }
-        });
-
-        const result = Object.values(secretsMap);
-        result.forEach((s: any) => {
-            s.allVersions = Array.from(new Set(s.allVersions)); // Remove duplicates
-            s.allVersions.sort((a: number, b: number) => b - a);
-        });
-
         res.json(result);
     } catch (err) {
         console.error(err);
@@ -62,74 +106,61 @@ const MAX_VERSIONS = 5;
 router.post('/', async (req: AuthRequest, res) => {
     try {
         const email = req.user!.email;
-        const { name, ciphertext, salt, iv, metadata } = req.body;
+        const { name, text, salt, iv, meta } = req.body;
 
-        // 1. Check if a secret with this name already exists
-        const queryCommand = new QueryCommand({
-            TableName: USER_SECRETS_TABLE,
-            KeyConditionExpression: 'user_id = :uid',
-            FilterExpression: '#n = :name',
-            ExpressionAttributeNames: {
-                '#n': 'name'
-            },
-            ExpressionAttributeValues: {
-                ':uid': email,
-                ':name': name
-            }
+        // check if key already exists
+        const item =  await getItem<SecretMetadata>({
+            table: TableNames.Secret,
+            pk: getPk(email),
+            sk: getMetaSK(name)
         });
 
-        const queryResponse = await docClient.send(queryCommand);
-        const existingItems = queryResponse.Items || [];
+        const {v: existing_versions} = item || {v:[]};
 
-        let id: string;
-        let version: number;
 
-        if (existingItems.length > 0) {
-            // Find the latest version
-            const sorted = existingItems.sort((a, b) => b.version - a.version);
-            const latest = sorted[0];
-            id = latest.secret_id.split('#')[0];
-            version = latest.version + 1;
-
-            // Pruning: Keep only MAX_VERSIONS - 1 oldest, so new one makes it MAX_VERSIONS
-            if (existingItems.length >= MAX_VERSIONS) {
-                // Delete oldest versions
-                const toDelete = sorted.slice(MAX_VERSIONS - 1);
-                for (const item of toDelete) {
-                    await docClient.send(new DeleteCommand({
-                        TableName: USER_SECRETS_TABLE,
-                        Key: {
-                            user_id: email,
-                            secret_id: item.secret_id
-                        }
-                    }));
-                }
+        const new_ver = Date.now();
+        
+        await putItem({
+            table: TableNames.Secret,
+            item: {
+                pk: getPk(email),
+                sk: getSecretSk(name, new_ver),
+                name: name,
+                v: new_ver,
+                text,
+                salt,
+                iv,
+                meta,
+                created_at: new Date().toISOString()
             }
-        } else {
-            id = uuidv4();
-            version = 1;
+        })
+        if(existing_versions.length === 0){
+            await putItem({
+                table: TableNames.Secret,
+                item:{
+                    pk: getPk(email),
+                    sk: getMetaSK(name),
+                    cv: new_ver,
+                    v: [new_ver],
+                    createdAt: new Date().toISOString()
+                }
+            })
+        }
+        else {
+            await updateItem({
+                table: TableNames.Secret,
+                pk: getPk(email),
+                sk: getMetaSK(name),
+                expressions: ['cv = :cv', 'v = :new_ver', 'updatedAt = :at'],
+                values: {
+                    ':cv': new_ver,
+                    ':new_ver': [new_ver, ...existing_versions].slice(0, 5),
+                    ':at': new Date().toISOString()
+                }
+            })
         }
 
-        const secretId = `${id}#${version}`;
-
-        const newItem = {
-            user_id: email,
-            secret_id: secretId,
-            version,
-            name,
-            ciphertext,
-            salt,
-            iv,
-            metadata,
-            created_at: new Date().toISOString()
-        };
-
-        await docClient.send(new PutCommand({
-            TableName: USER_SECRETS_TABLE,
-            Item: newItem
-        }));
-
-        res.status(201).json({ id, version });
+        res.status(201).json({ pk: getPk(email), sk: getSecretSk(name, new_ver) });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
@@ -142,92 +173,78 @@ router.get('/:id', async (req: AuthRequest, res) => {
         const email = req.user!.email;
         const { id } = req.params;
         const { version } = req.query;
+        let version_stamp: number = -1;
 
-        let items;
-        if (version) {
-            // Get specific version
-            const secretId = `${id}#${version}`;
-            const response = await docClient.send(new GetCommand({
-                TableName: USER_SECRETS_TABLE,
-                Key: {
-                    user_id: email,
-                    secret_id: secretId
-                }
-            }));
-            items = response.Item ? [response.Item] : [];
-        } else {
-            // Get all versions to find latest
-            // Efficient way: Limit 1, ScanIndexForward: false (Desc)
-            // But SK is secret_id#version.
-            // If we query SK begins_with id, we get id#1, id#10, id#2.
-            // Because of string sorting, 10 comes before 2.
-            // We need to fix SK format to be padded or sort in app.
-            // Or just query all and sort.
-            const response = await docClient.send(new QueryCommand({
-                TableName: USER_SECRETS_TABLE,
-                KeyConditionExpression: 'user_id = :uid AND begins_with(secret_id, :sid)',
-                ExpressionAttributeValues: {
-                    ':uid': email,
-                    ':sid': id + '#'
-                }
-            }));
-            items = response.Items || [];
-        }
+        const meta = await getItem<SecretMetadata>({
+            table: TableNames.Secret,
+            pk: getPk(email),
+            sk: getMetaSK(id)
+        })
 
-        if (items.length === 0) {
-            return res.status(404).json({ error: 'Secret not found' });
-        }
-
-        // Sort by version desc
-        items.sort((a, b) => b.version - a.version);
-        res.json(items[0]); // Return latest
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Delete all versions of a secret
-router.delete('/:id', async (req: AuthRequest, res) => {
-    try {
-        const email = req.user!.email;
-        const { id } = req.params;
-
-        // 1. Get all versions of this secret
-        const queryCommand = new QueryCommand({
-            TableName: USER_SECRETS_TABLE,
-            KeyConditionExpression: 'user_id = :uid AND begins_with(secret_id, :sid)',
-            ExpressionAttributeValues: {
-                ':uid': email,
-                ':sid': id + '#'
+        if(meta){
+            if (version) {
+                version_stamp = meta.v.indexOf(+version);
             }
-        });
+            else {
+                version_stamp = meta.cv;
+            }
+            const item = await getItem<Secret>({
+                table: TableNames.Secret,
+                pk: getPk(email),
+                sk: getSecretSk(id, version_stamp)
+            })
 
-        const response = await docClient.send(queryCommand);
-        const items = response.Items || [];
-
-        if (items.length === 0) {
-            return res.status(404).json({ error: 'Secret not found' });
+            if(item){
+                res.json(item);
+            }
         }
-
-        // 2. Delete all versions
-        for (const item of items) {
-            await docClient.send(new DeleteCommand({
-                TableName: USER_SECRETS_TABLE,
-                Key: {
-                    user_id: email,
-                    secret_id: item.secret_id
-                }
-            }));
-        }
-
-        res.json({ message: 'Secret and all versions deleted' });
-
+        return res.status(404).json({ error: 'Secret not found' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// // Delete all versions of a secret
+// router.delete('/:id', async (req: AuthRequest, res) => {
+//     try {
+//         const email = req.user!.email;
+//         const { id } = req.params;
+
+//         // 1. Get all versions of this secret
+//         const queryCommand = new QueryCommand({
+//             TableName: USER_SECRETS_TABLE,
+//             KeyConditionExpression: 'user_id = :uid AND begins_with(secret_id, :sid)',
+//             ExpressionAttributeValues: {
+//                 ':uid': email,
+//                 ':sid': id + '#'
+//             }
+//         });
+
+//         const response = await docClient.send(queryCommand);
+//         const items = response.Items || [];
+
+//         if (items.length === 0) {
+//             return res.status(404).json({ error: 'Secret not found' });
+//         }
+
+//         // 2. Delete all versions
+//         for (const item of items) {
+//             await docClient.send(new DeleteCommand({
+//                 TableName: USER_SECRETS_TABLE,
+//                 Key: {
+//                     user_id: email,
+//                     secret_id: item.secret_id
+//                 }
+//             }));
+//         }
+
+//         res.json({ message: 'Secret and all versions deleted' });
+
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// });
 
 export default router;

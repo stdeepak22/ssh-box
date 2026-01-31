@@ -27,7 +27,7 @@ export async function listSecrets() {
         console.table(secrets.map((s: any) => ({
             Name: s.name,
             Version: s.version,
-            History: s.allVersions && s.allVersions.length > 0 ? s.allVersions.join(', ') : s.version,
+            History: s.versionCount,
             'Last Modified': new Date(s.created_at).toLocaleString()
         })));
         console.log('------------------------------\n');

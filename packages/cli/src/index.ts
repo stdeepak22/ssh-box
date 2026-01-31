@@ -6,6 +6,7 @@ import { getSecret } from './commands/get';
 import { listSecrets } from './commands/list';
 import { removeSecret } from './commands/remove';
 import { restoreSecret } from './commands/restore';
+import { setMasterPassword } from './commands/master';
 
 const program = new Command();
 
@@ -54,4 +55,10 @@ program
     .description('Restore a specific version of a secret as latest\nver is -1 to -n\n-1: previous version\n-2: prev-prev version\n...')
     .option('-v, --ver <ver>', 'Version of the secret (-1 to -n)')
     .action(restoreSecret);
+
+program
+    .command('set-master')
+    .description('Set or update your account-wide Master Password')
+    .action(setMasterPassword);
+
 program.parse(process.argv);

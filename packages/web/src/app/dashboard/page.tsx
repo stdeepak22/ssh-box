@@ -60,7 +60,7 @@ export default function Dashboard() {
         if (!selectedSecret || !masterPassword) return;
 
         try {
-            const authTag = (selectedSecret.metadata as any)?.authTag;
+            const authTag = (selectedSecret.meta as any)?.authTag;
 
             if (!authTag) {
                 alert('Missing authTag in secret metadata. Cannot decrypt.');
@@ -71,7 +71,7 @@ export default function Dashboard() {
                 selectedSecret.salt,
                 selectedSecret.iv,
                 authTag,
-                selectedSecret.ciphertext
+                selectedSecret.text
             ].join(':');
 
             const plain = await decrypt(encryptedStr, masterPassword);
@@ -96,15 +96,15 @@ export default function Dashboard() {
         }
 
         try {
-            await api.delete(`/secrets/${secret.id}`);
+            await api.delete(`/secrets/${secret.name}`);
             alert('Secret deleted successfully.');
 
             // Update local state and cache
-            const updated = secrets.filter(s => s.id !== secret.id);
+            const updated = secrets.filter(s => s.name !== secret.name);
             setSecrets(updated);
             await db.saveSecrets(updated); // This will overwrite with the smaller list
 
-            if (selectedSecret?.id === secret.id) {
+            if (selectedSecret?.name === secret.name) {
                 setSelectedSecret(null);
                 setDecryptedValue(null);
                 setMasterPassword('');
@@ -141,8 +141,8 @@ export default function Dashboard() {
                         <ul className="space-y-2">
                             {secrets.map((s) => (
                                 <li
-                                    key={s.id}
-                                    className={`p-3 rounded cursor-pointer hover:bg-indigo-50 flex justify-between items-center group ${selectedSecret?.id === s.id ? 'bg-indigo-100 border-l-4 border-indigo-500' : ''}`}
+                                    key={s.name}
+                                    className={`p-3 rounded cursor-pointer hover:bg-indigo-50 flex justify-between items-center group ${selectedSecret?.name === s.name ? 'bg-indigo-100 border-l-4 border-indigo-500' : ''}`}
                                     onClick={() => {
                                         setSelectedSecret(s);
                                         setDecryptedValue(null);
@@ -151,7 +151,7 @@ export default function Dashboard() {
                                 >
                                     <div>
                                         <p className="font-medium">{s.name}</p>
-                                        <p className="text-xs text-gray-500">v{s.version}</p>
+                                        <p className="text-xs text-gray-500">v{s.v.toString()}</p>
                                     </div>
                                     <button
                                         onClick={(e) => {
@@ -234,14 +234,14 @@ function AddSecretForm({ onAdded }: { onAdded: () => void }) {
         try {
             const encrypted = await encrypt(content, password);
             // encrypted format: salt:iv:authTag:ciphertext
-            const [salt, iv, authTag, ciphertext] = encrypted.split(':');
+            const [salt, iv, authTag, text] = encrypted.split(':');
 
             await api.post('/secrets', {
                 name,
-                ciphertext,
+                text,
                 salt,
                 iv,
-                metadata: { authTag },
+                meta: { authTag },
             });
             alert('Secret added successfully!');
             setName('');

@@ -1,21 +1,30 @@
+
 export interface User {
-    email: string;
-    id: string; // UUID
+    pk: string; // USER#${email}
+    sk: string; // CRED
     passwordHash?: string; // Only on server
     createdAt: string;
 }
 
-export interface Secret {
-    id: string; // UUID
-    userId: string;
-    name: string;
-    version: number;
-    ciphertext: string;
-    salt: string;
-    iv: string;
-    metadata: any;
+export interface SecretMetadata {
+    pk: string; // USER#${email}
+    sk: string; // SM#KEY99
+    cv: number;
+    v: number[];
     createdAt: string;
     updatedAt: string;
+}
+
+export interface Secret {
+    pk: string; // USER#${email}
+    sk: string; // K#KEY99#12121
+    name: string;
+    v: number;
+    text: string;
+    salt: string;
+    iv: string;
+    meta: any;
+    createdAt: string;
 }
 
 export interface AuthResponse {
