@@ -1,59 +1,51 @@
-// import inquirer from 'inquirer';
-// import { getBaseUrl, getToken } from '../config';
-// import ora from 'ora';
+import inquirer from 'inquirer';
+import ora from 'ora';
+import { getHelpr } from '../utils/shared-instance';
 
 export async function removeSecret(name: string) {
-    console.log(`will implement remove later`);
-    // const token = getToken();
-    // if (!token) {
-    //     console.error('Not logged in. Please use the "login" command.');
-    //     return;
-    // }
+    if (!name) {
+        console.error('Error: Secret name is required.');
+        return;
+    }
 
-    // const spinner = ora('Checking secret...').start();
-    // try {
-    //     const baseUrl = getBaseUrl();
-    //     // 1. Find the secret by name to get its ID
-    //     const res = await fetch(`${baseUrl}/secrets`, {
-    //         headers: { Authorization: `Bearer ${token}` }
-    //     });
-    //     const secrets = await res.json();
+    // 1. Confirm deletion before making any API calls
+    const { confirm } = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'confirm',
+            message: `Are you sure you want to delete "${name}" and all its versions?`,
+            default: false
+        }
+    ]);
 
-    //     const secret = secrets.find((s: any) => s.name === name);
+    if (!confirm) {
+        console.log('Action cancelled.');
+        return;
+    }
 
-    //     if (!secret) {
-    //         spinner.fail(`Secret "${name}" not found.`);
-    //         return;
-    //     }
+    const spinner = ora(`Deleting "${name}"...`).start();
+    
+    try {
+        const helper = getHelpr();
+        if (!helper) {
+            spinner.fail('Helper not initialized. Please restart the CLI.');
+            return;
+        }
 
-    //     spinner.stop();
+        // 2. Direct deletion - let server handle existence check
+        const deleteResult = await helper.removeSecret?.(name);
+        if (!deleteResult) {
+            spinner.fail('Helper method not available.');
+            return;
+        }
 
-    //     // 2. Confirm deletion
-    //     const { confirm } = await inquirer.prompt([
-    //         {
-    //             type: 'confirm',
-    //             name: 'confirm',
-    //             message: `Are you sure you want to delete "${name}" and all its versions?`,
-    //             default: false
-    //         }
-    //     ]);
+        if (deleteResult.success) {
+            spinner.succeed(`Secret "${name}" deleted successfully.`);
+        } else {
+            spinner.fail(`Failed to delete secret: ${deleteResult.error || 'Unknown error'}`);
+        }
 
-    //     if (!confirm) {
-    //         console.log('Action cancelled.');
-    //         return;
-    //     }
-
-    //     spinner.start(`Deleting "${name}"...`);
-
-    //     // 3. Perform deletion
-    //     await fetch(`${baseUrl}/secrets/${secret.id}`, {
-    //         method: 'DELETE',
-    //         headers: { Authorization: `Bearer ${token}` }
-    //     });
-
-    //     spinner.succeed(`Secret "${name}" deleted successfully.`);
-
-    // } catch (error: any) {
-    //     spinner.fail(`Failed to delete secret: ${error.response?.data?.error || error.message}`);
-    // }
+    } catch (error: any) {
+        spinner.fail(`Failed to delete secret: ${error.message || 'Unknown error'}`);
+    }
 }

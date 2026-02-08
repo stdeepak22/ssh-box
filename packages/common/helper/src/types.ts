@@ -38,6 +38,14 @@ export interface AddSecretResponse extends ServerRequest {
 
 }
 
+export interface RemoveSecretResponse extends ServerRequest {
+
+}
+
+export interface RestoreSecretResponse extends ServerRequest {
+
+}
+
 export declare abstract class AuthStorageService {
     abstract getBaseUrl(): string;
     abstract getToken(): string | undefined;

@@ -1,4 +1,4 @@
-import { AuthStorageService, GetAllSecretsResponse, AddSecretResponse, SecretDetail } from "../types.js";
+import { AuthStorageService, GetAllSecretsResponse, AddSecretResponse, RemoveSecretResponse, RestoreSecretResponse, SecretDetail } from "../types.js";
 import { ShouldBeAuthenticated, ShouldBeAuthenticatedResult } from "./decorators/authenticated.js";
 import { EncryptionParts, UnlockedVaultNeeded, UnlockVaultNeededResult, VaultService } from "@ssh-box/zero-vault";
 
@@ -9,13 +9,13 @@ export class SecretHelper {
         this._authStorageService = authStorageService;
     }
 
-    async #postToDB(detail: ShouldBeAuthenticatedResult, name: string, parts: EncryptionParts) {
+    async #postToDB(name: string, parts: EncryptionParts) {
+        const { getBaseUrl, getToken } = this._authStorageService!;
         try {
-            const {baseUrl, token} = detail;
-            const res = await fetch(`${baseUrl}/secrets`, {
+            const res = await fetch(`${getBaseUrl()}/secrets`, {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${getToken()}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -24,7 +24,7 @@ export class SecretHelper {
                 })
             });
 
-            
+
             if (!res.ok) {
                 return { success: false, error: 'Failed to save your secret.' };
             }
@@ -36,13 +36,13 @@ export class SecretHelper {
         }
     }
 
-    async #getAllSecrets(detail: ShouldBeAuthenticatedResult): Promise<GetAllSecretsResponse> {
+    async #getAllSecrets(): Promise<GetAllSecretsResponse> {
+        const { getBaseUrl, getToken } = this._authStorageService!;
         try {
-            const {baseUrl, token} = detail;
-            const res = await fetch(`${baseUrl}/secrets`, {
-                headers: { Authorization: `Bearer ${token}` }
+            const res = await fetch(`${getBaseUrl()}/secrets`, {
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
-            if(!res.ok){
+            if (!res.ok) {
                 return {
                     success: false,
                     error: `Couldn't fetch secrets.`
@@ -62,29 +62,27 @@ export class SecretHelper {
     }
 
     async #getSecretByName(
-        detail: ShouldBeAuthenticatedResult,
         name: string,
         version?: string
     ) {
+        const { getBaseUrl, getToken } = this._authStorageService!;
         try {
-            const {baseUrl, token} = detail;
-            let url = `${baseUrl}/secrets/${name}`;
-            if(version)
-            {
-                url=`${url}?version=${version}`;
+            let url = `${getBaseUrl()}/secrets/${name}`;
+            if (version) {
+                url = `${url}?version=${version}`;
             }
 
             const res = await fetch(url, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
-            if(!res.ok){
+            if (!res.ok) {
                 return {
                     success: false,
                     error: `Couldn't fetch given secret.`
                 }
             }
             const secret: EncryptionParts = await res.json();
-            
+
             return {
                 success: true,
                 secret
@@ -94,6 +92,25 @@ export class SecretHelper {
                 success: false,
                 error: error?.message || `Something weng wrong, and couldn't fetch given secret, try again after sometime.`
             }
+        }
+    }
+
+    async #deleteSecretFromDB(name: string): Promise<RemoveSecretResponse> {
+        const { getBaseUrl, getToken } = this._authStorageService!;
+        try {
+            const res = await fetch(`${getBaseUrl()}/secrets/${name}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${getToken()}` }
+            });
+
+            if (!res.ok) {
+                return { success: false, error: 'Failed to delete your secret.' };
+            }
+            return {
+                success: true,
+            }
+        } catch (error: any) {
+            return { success: false, error: error?.message || `Something went wrong, and couldn't delete secret, try again later.` };
         }
     }
 
@@ -108,12 +125,12 @@ export class SecretHelper {
 
         let content = secretValue;
         if (!content) {
-            return {success: false, error:'Secret value is not provided, please make sure to provide secret name, and value'};
+            return { success: false, error: 'Secret value is not provided, please make sure to provide secret name, and value' };
         }
 
         try {
             const encryptedData = await VaultService.saveSecret(content);
-            return this.#postToDB(authDecoratorValue!, secretName, encryptedData)
+            return this.#postToDB(secretName, encryptedData)
         } catch (error: any) {
             return {
                 success: false,
@@ -128,20 +145,20 @@ export class SecretHelper {
         authDecoratorValue?: ShouldBeAuthenticatedResult,
         unlockDecoratorValue?: UnlockVaultNeededResult,
     ) {
-        return this.#getAllSecrets(authDecoratorValue!);
+        return this.#getAllSecrets();
     }
 
     @ShouldBeAuthenticated()
     @UnlockedVaultNeeded()
     async getSecretByName(
         name: string,
-        version?: string, 
+        version?: string,
         authDecoratorValue?: ShouldBeAuthenticatedResult,
         unlockDecoratorValue?: UnlockVaultNeededResult,
     ) {
         let plainText = undefined;
-        const res = await this.#getSecretByName(authDecoratorValue!, name, version);
-        if(res.success && res.secret) {
+        const res = await this.#getSecretByName(name, version);
+        if (res.success && res.secret) {
             plainText = await VaultService.decryptSecret(res.secret);
         }
         return {
@@ -150,6 +167,60 @@ export class SecretHelper {
             data: {
                 plainText
             }
+        }
+    }
+
+    @ShouldBeAuthenticated()
+    async removeSecret(
+        name: string,
+        authDecoratorValue?: ShouldBeAuthenticatedResult,
+    ): Promise<RemoveSecretResponse> {
+        if (!name) {
+            return { success: false, error: 'Secret name is required for deletion.' };
+        }
+
+        return await this.#deleteSecretFromDB(name);
+    }
+
+    @ShouldBeAuthenticated()
+    @UnlockedVaultNeeded()
+    async restoreSecret(
+        name: string,
+        version?: string,
+        authDecoratorValue?: ShouldBeAuthenticatedResult,
+        unlockDecoratorValue?: UnlockVaultNeededResult,
+    ): Promise<RestoreSecretResponse> {
+        if (!name) {
+            return { success: false, error: 'Secret name is required for restoration.' };
+        }
+
+        try {
+            // 1. Get the specific version to restore
+            const getVersionResult = await this.#getSecretByName(name, version);
+            if (!getVersionResult.success || !getVersionResult.secret) {
+                return {
+                    success: false,
+                    error: getVersionResult.error || `Failed to fetch secret version ${version || 'latest'}`
+                };
+            }
+
+            // 2. Decrypt the secret to verify it can be restored
+            const plainText = await VaultService.decryptSecret(getVersionResult.secret);
+
+            // 3. Re-encrypt and save as the latest version
+            const encryptedData = await VaultService.saveSecret(plainText);
+            const saveResult = await this.#postToDB(name, encryptedData);
+
+            return {
+                success: saveResult.success,
+                error: saveResult.error
+            };
+
+        } catch (error: any) {
+            return {
+                success: false,
+                error: `Failed to restore secret: ${error.message}`
+            };
         }
     }
 }

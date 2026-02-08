@@ -8,7 +8,7 @@ import { PingPongHelper } from './password/ping.helper.js';
 export class Helper {
     private static _instance?: Helper;
     private _authStorageService?: AuthStorageService;
-    
+
     private _masterPasswordHelper?: MasterPasswordHelper;
     private _secretHelper?: SecretHelper;
     private _authHelper?: AuthHelper;
@@ -20,7 +20,7 @@ export class Helper {
         this._secretHelper = new SecretHelper(this._authStorageService);
         this._authHelper = new AuthHelper(this._authStorageService);
         this._pingHelper = new PingPongHelper(this._authStorageService);
-    }    
+    }
 
     static getInstance(authStorageService: AuthStorageService) {
         if (!this._instance) {
@@ -29,7 +29,7 @@ export class Helper {
         return this._instance;
     }
 
-    async ping(){
+    async ping() {
         return this._pingHelper?.ping();
     }
 
@@ -57,10 +57,18 @@ export class Helper {
         return this._secretHelper?.getSecretList();
     }
 
+    async removeSecret(name: string) {
+        return this._secretHelper?.removeSecret(name);
+    }
+
+    async restoreSecret(name: string, version?: string) {
+        return this._secretHelper?.restoreSecret(name, version);
+    }
+
     async registerNewAccount(email: string, password: string) {
         return this._authHelper?.registerNewAccount(email, password);
     }
-    
+
     async login(email: string, password: string) {
         return this._authHelper?.login(email, password);
     }
