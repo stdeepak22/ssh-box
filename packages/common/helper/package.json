@@ -1,0 +1,28 @@
+{
+    "name": "@ssh-box/common_helper",
+    "version": "1.0.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "files": [
+        "dist/"
+    ],
+    "scripts": {
+        "prepublishOnly": "npm run clean-build",
+        "clean": "rm -r dist",
+        "build": "tsc",
+        "clean-build": "npm run clean;npm run build"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "typescript": "^5.3.3"
+    },
+    "description": "",
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@ssh-box/common_types": "^1.0.0",
+        "@ssh-box/zero-vault": "^1.0.0"
+    }
+}

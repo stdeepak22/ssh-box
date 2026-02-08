@@ -1,17 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import inquirer from 'inquirer';
-import { encrypt } from '@ssh-box/common/dist/crypto';
-import { getToken, getBaseUrl } from '../config';
 import ora from 'ora';
+import { helper } from '../utils/shared-instance';
+
+
 
 export async function addSecret(name: string, value: string | undefined, options: { file?: string }) {
-    const token = getToken();
-    if (!token) {
-        console.error('Not logged in. Run "ssh-box login" first.');
-        return;
-    }
-
+    
     let content = value;
 
     if (!content && options.file) {
@@ -28,36 +23,17 @@ export async function addSecret(name: string, value: string | undefined, options
         return;
     }
 
-    const { password } = await inquirer.prompt([
-        { type: 'password', name: 'password', message: 'Enter Master Encryption Password:', mask: '*' }
-    ]);
-
     const spinner = ora('Encrypting...').start();
+
     try {
-        const encryptedData = await encrypt(content, password);
-        spinner.text = 'Uploading...';
-
-        const baseUrl = getBaseUrl();
-        // Format: salt:iv:authTag:ciphertext
-        const [salt, iv, authTag, ciphertext] = encryptedData.split(':');
-
-        await fetch(`${baseUrl}/secrets`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                ciphertext,
-                salt,
-                iv,
-                metadata: { authTag }
-            })
-        });
-
-        spinner.succeed('Secret added successfully!');
+        spinner.text = 'Uploading...';        
+        const res = await helper.saveSecret(name, content);
+        if(res?.success){
+            spinner.succeed('Secret added successfully!');
+        } else {
+            spinner.fail(res?.error || 'Failed to add secret.');
+        }
     } catch (error: any) {
-        spinner.fail(`Failed to add secret: ${error.response?.data?.error || error.message}`);
+        spinner.fail(`Failed to add secret: ${error.message}`);
     }
 }

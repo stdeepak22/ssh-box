@@ -2,15 +2,21 @@
     "name": "@ssh-box/backend",
     "version": "1.0.0",
     "main": "dist/server.js",
+    "files": [
+        "dist"
+    ],
     "scripts": {
+        "prepublishOnly": "npm run clean-build",
+        "clean": "rm -r dist",
         "build": "tsc",
+        "clean-build": "npm run clean && npm run build",
         "start": "node dist/server.js",
         "dev": "ts-node-dev src/server.ts"
     },
     "dependencies": {
         "@aws-sdk/client-dynamodb": "^3.400.0",
         "@aws-sdk/lib-dynamodb": "^3.400.0",
-        "@ssh-box/common": "*",
+        "@ssh-box/common_types": "*",
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
         "dotenv": "^16.3.1",

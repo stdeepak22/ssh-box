@@ -1,0 +1,24 @@
+{
+  "name": "@ssh-box/common_types",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "prepublishOnly": "npm run clean-build",
+    "clean": "rm -r dist",
+    "build": "tsc",
+    "clean-build": "npm run clean;npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.0"
+  },
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

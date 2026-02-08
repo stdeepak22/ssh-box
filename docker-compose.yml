@@ -38,11 +38,11 @@ services:
     # depends_on:
     #   - dynamodb-local
 
-  web:
-    build:
-      context: .
-      dockerfile: packages/web/Dockerfile
-    ports:
-      - "8080:3000"
-    depends_on:
-      - backend
+  # web:
+  #   build:
+  #     context: .
+  #     dockerfile: packages/web/Dockerfile
+  #   ports:
+  #     - "8080:3000"
+  #   depends_on:
+  #     - backend

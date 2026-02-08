@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getItem, putItem, TableNames, updateItem } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { User } from '@ssh-box/common';
+import { DbUser, EncryptionParts } from '@ssh-box/common_types';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
@@ -11,6 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 const getPk = (email: string) => `USER#${email}`
 const getSk = () => `CRED`
+const getMpSk = () => `MP`
 
 // Register
 router.post('/register', async (req, res) => {
@@ -36,12 +37,25 @@ router.post('/register', async (req, res) => {
             pk: getPk(email),
             sk: getSk(),
             passwordHash: hashedPassword,
+            has_mp: false,
             createdAt: new Date().toISOString()
         };
 
         await putItem({
             table: TableNames.Account,
             item: newUser
+        })
+
+        await putItem({
+            table: TableNames.Account,
+            item: {
+                pk: getPk(email),
+                sk: getMpSk(),
+                salt: undefined,
+                iv: undefined,
+                ct: undefined,
+                createdAt: new Date().toISOString(),
+            }
         })
 
         res.status(201).json({ message: 'User created' });
@@ -56,7 +70,7 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await getItem<User>({
+        const user = await getItem<DbUser>({
             table: TableNames.Account,
             pk: getPk(email),
             sk: getSk(),
@@ -66,13 +80,14 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const validPassword = await bcrypt.compare(password, user.passwordHash||'');
+        const validPassword = await bcrypt.compare(password, user.passwordHash || '');
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '1Y' });
-        res.json({ token, email });
+
+        res.json({ token, email, has_mp: user.has_mp });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
@@ -83,19 +98,41 @@ router.post('/login', async (req, res) => {
 router.post('/set-master', authenticateToken, async (req: AuthRequest, res) => {
     try {
         const email = req.user!.email;
-        const { verifier } = req.body; // { salt, iv, authTag, ciphertext }
+        const { salt, iv, ct } = req.body as EncryptionParts; // { salt, iv, ct }
 
-        if (!verifier || !verifier.ciphertext) {
-            return res.status(400).json({ error: 'Master verifier components required' });
+        if (!salt || !iv || !ct) {
+            return res.status(400).json({ error: 'checking payload, not all required fields provided.' });
         }
 
         await updateItem({
             table: TableNames.Account,
             pk: getPk(email),
-            sk: getSk(),
-            expressions: ['masterVerifier = :v'],
+            sk: getMpSk(),
+            expressions: [
+                "salt=:salt",
+                "iv=:iv",
+                "ct=:ct",
+                "updatedAt=:updatedAt"
+            ],
             values: {
-                ':v': verifier
+                ':salt': salt,
+                ':iv': iv,
+                ':ct': ct,
+                ':updatedAt': new Date().toISOString(),
+            }
+        })
+
+        await updateItem({
+            table: TableNames.Account,
+            pk: getPk(email),
+            sk: getSk(),
+            expressions: [
+                "has_mp=:has_mp",
+                "updatedAt=:updatedAt"
+            ],
+            values: {
+                ':has_mp': true,
+                ':updatedAt': new Date().toISOString(),
             }
         })
         res.json({ message: 'Master verifier set successfully' });
@@ -110,17 +147,17 @@ router.get('/master-verifier', authenticateToken, async (req: AuthRequest, res) 
     try {
         const email = req.user!.email;
 
-        const user:any = await getItem({
+        const parts = await getItem<EncryptionParts>({
             table: TableNames.Account,
             pk: getPk(email),
-            sk: getSk(),
+            sk: getMpSk(),
         })
 
-        if (!user || !user['masterVerifier']) {
+        if (!parts || !parts.ct) {
             return res.status(404).json({ error: 'Master password not set for this account' });
         }
 
-        res.json(user.masterVerifier);
+        res.json(parts);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });

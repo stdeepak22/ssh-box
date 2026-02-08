@@ -1,8 +1,9 @@
 import express from 'express';
 import { queryByPkSkPrefix, TableNames, PkSk, batchGetItems, putItem, getItem, updateItem } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { SecretMetadata, Secret } from '@ssh-box/common';
-import { unmarshall } from '@aws-sdk/util-dynamodb';
+import { DbSecretMetadata, DbSecret } from '@ssh-box/common_types';
+
+
 const router = express.Router();
 
 
@@ -10,19 +11,19 @@ router.use(authenticateToken);
 
 
 const getPk = (email: string) => `USER#${email}`
-const getMetaSK = (name?: string)=> {
-    let sk = `SW#`
-    if(name) {
+const getMetaSK = (name?: string) => {
+    let sk = `SM#`
+    if (name) {
         sk = `${sk}${name}`;
     }
     return sk;
 }
 const getSecretSk = (name?: string, ver?: number) => {
     let sk = "S#";
-    if(name){
+    if (name) {
         sk = `${sk}${name}#`;
     }
-    if(ver){
+    if (ver) {
         sk = `${sk}${ver}`;
     }
     return sk;
@@ -34,7 +35,7 @@ const getSecretSk = (name?: string, ver?: number) => {
 
 const getKeysMetadata = async (email: string) => {
     const pk = getPk(email);
-    const resp = await queryByPkSkPrefix<SecretMetadata>({
+    const resp = await queryByPkSkPrefix<DbSecretMetadata>({
         table: TableNames.Secret,
         pk,
         sk_prefix: getMetaSK()
@@ -45,9 +46,9 @@ const getKeysMetadata = async (email: string) => {
         versions: {
             [key: string]: number[]
         },
-    } = {keys: [], versions: {}};
+    } = { keys: [], versions: {} };
 
-    resp.forEach((item)=>{
+    resp.forEach((item) => {
         const key = item.sk.split('#')[1]
         secretKeysWithVersion.keys.push({
             pk,
@@ -64,10 +65,10 @@ router.get('/', async (req: AuthRequest, res) => {
     try {
         const email = req.user!.email;
 
-        const {keys, versions} = await getKeysMetadata(email);
-        let items: Secret[]= [];
-        if(keys.length){
-            const batchResp  = await batchGetItems<Secret>({
+        const { keys, versions } = await getKeysMetadata(email);
+        let items: DbSecret[] = [];
+        if (keys.length) {
+            const batchResp = await batchGetItems<DbSecret>({
                 batchRequest: [{
                     table: TableNames.Secret,
                     keys: keys
@@ -77,17 +78,16 @@ router.get('/', async (req: AuthRequest, res) => {
         }
 
 
-        const result:any[] = [];
-        items.forEach((item: Secret) => {
-            const {name, v, text, salt, iv, meta, createdAt } = item;
+        const result: any[] = [];
+        items.forEach((item: DbSecret) => {
+            const { name, v, ct, salt, iv, createdAt } = item;
             const idx = versions[name].indexOf(v);
 
             result.push({
                 name,
-                text,
+                ct,
                 salt,
                 iv,
-                meta,
                 createdAt,
                 version: idx,
                 versionCount: versions[name].length
@@ -106,20 +106,20 @@ const MAX_VERSIONS = 5;
 router.post('/', async (req: AuthRequest, res) => {
     try {
         const email = req.user!.email;
-        const { name, text, salt, iv, meta } = req.body;
+        const { name, ct, salt, iv } = req.body;
 
         // check if key already exists
-        const item =  await getItem<SecretMetadata>({
+        const item = await getItem<DbSecretMetadata>({
             table: TableNames.Secret,
             pk: getPk(email),
             sk: getMetaSK(name)
         });
 
-        const {v: existing_versions} = item || {v:[]};
+        const { v: existing_versions } = item || { v: [] };
 
 
         const new_ver = Date.now();
-        
+
         await putItem({
             table: TableNames.Secret,
             item: {
@@ -127,17 +127,16 @@ router.post('/', async (req: AuthRequest, res) => {
                 sk: getSecretSk(name, new_ver),
                 name: name,
                 v: new_ver,
-                text,
+                ct,
                 salt,
                 iv,
-                meta,
                 created_at: new Date().toISOString()
             }
         })
-        if(existing_versions.length === 0){
+        if (existing_versions.length === 0) {
             await putItem({
                 table: TableNames.Secret,
-                item:{
+                item: {
                     pk: getPk(email),
                     sk: getMetaSK(name),
                     cv: new_ver,
@@ -151,7 +150,11 @@ router.post('/', async (req: AuthRequest, res) => {
                 table: TableNames.Secret,
                 pk: getPk(email),
                 sk: getMetaSK(name),
-                expressions: ['cv = :cv', 'v = :new_ver', 'updatedAt = :at'],
+                expressions: [
+                    'cv = :cv',
+                    'v = :new_ver',
+                    'updatedAt = :at'
+                ],
                 values: {
                     ':cv': new_ver,
                     ':new_ver': [new_ver, ...existing_versions].slice(0, 5),
@@ -175,27 +178,27 @@ router.get('/:id', async (req: AuthRequest, res) => {
         const { version } = req.query;
         let version_stamp: number = -1;
 
-        const meta = await getItem<SecretMetadata>({
+        const meta = await getItem<DbSecretMetadata>({
             table: TableNames.Secret,
             pk: getPk(email),
             sk: getMetaSK(id)
         })
 
-        if(meta){
+        if (meta) {
             if (version) {
                 version_stamp = meta.v.indexOf(+version);
             }
             else {
                 version_stamp = meta.cv;
             }
-            const item = await getItem<Secret>({
+            const item = await getItem<DbSecret>({
                 table: TableNames.Secret,
                 pk: getPk(email),
                 sk: getSecretSk(id, version_stamp)
             })
 
-            if(item){
-                res.json(item);
+            if (item) {
+                return res.json(item);
             }
         }
         return res.status(404).json({ error: 'Secret not found' });
@@ -204,6 +207,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 // // Delete all versions of a secret
 // router.delete('/:id', async (req: AuthRequest, res) => {

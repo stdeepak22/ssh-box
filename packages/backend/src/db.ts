@@ -24,7 +24,7 @@ export enum TableNames {
 }
 
 const getTableName = (table: TableNames) => {
-    switch(table){
+    switch (table) {
         case TableNames.Account:
             return USERS_TABLE;
         case TableNames.Secret:
@@ -39,25 +39,25 @@ interface PkSk {
 
 interface getItemArg extends PkSk {
     table: TableNames,
-} 
+}
 
 interface batchGetItemsArg {
     batchRequest: {
         table: TableNames,
         keys: PkSk[]
-    } []
+    }[]
 }
 
 interface batchGetItemsOutput<T> {
     batchResponse: {
         table: TableNames,
         items: T[]
-    } []
-} 
+    }[]
+}
 
 interface putItemArg {
     table: TableNames,
-    item: PkSk & {[key: string]: any}
+    item: PkSk & { [key: string]: any }
 }
 
 interface queryItemArg {
@@ -71,7 +71,7 @@ interface updateItemArgs extends PkSk {
     table: TableNames,
     expressions: string[]
     values: {
-        [key:string]: any
+        [key: string]: any
     }
 }
 
@@ -79,37 +79,37 @@ interface updateItemArgs extends PkSk {
 export type { PkSk, getItemArg, batchGetItemsArg, putItemArg, queryItemArg, updateItemArgs }
 
 export const getItem = async <T = unknown>(args: getItemArg) => {
-    const {table, pk, sk} = args;
+    const { table, pk, sk } = args;
     const res = await docClient.send(new GetCommand({
         TableName: getTableName(table),
-        Key: {pk, sk}
+        Key: { pk, sk }
     }));
-    return res.Item as T;
+    return res.Item as T | undefined;
 }
 
 export const batchGetItems = async<T = unknown>(args: batchGetItemsArg): Promise<batchGetItemsOutput<T>> => {
     const { batchRequest } = args;
     const reqItems: {
-        [key:string]: {
+        [key: string]: {
             Keys: PkSk[]
         }
     } = {};
 
-    batchRequest.forEach(c=> {
-        const {table, keys: Keys } = c;
-        reqItems[getTableName(table)] = {Keys}
+    batchRequest.forEach(c => {
+        const { table, keys: Keys } = c;
+        reqItems[getTableName(table)] = { Keys }
     })
 
     const batchResp = await docClient.send(new BatchGetCommand({
         RequestItems: reqItems
     }));
 
-    const res: {table:TableNames, items: T[]}[] = [];
-    batchRequest.forEach(({table}) => {
+    const res: { table: TableNames, items: T[] }[] = [];
+    batchRequest.forEach(({ table }) => {
         const tableName = getTableName(table);
         res.push({
             table: table,
-            items: (batchResp.Responses?.[tableName] || []).map(c=>c as T)
+            items: (batchResp.Responses?.[tableName] || []).map(c => c as T)
         })
     })
 
@@ -119,20 +119,20 @@ export const batchGetItems = async<T = unknown>(args: batchGetItemsArg): Promise
 }
 
 export const putItem = async (args: putItemArg) => {
-    const {table, item} = args;
-    docClient.send(new PutCommand({
+    const { table, item } = args;
+    await docClient.send(new PutCommand({
         TableName: getTableName(table),
         Item: item
     }));
 }
 
 export const updateItem = async (args: updateItemArgs) => {
-    const {table, pk, sk, expressions, values} = args;
+    const { table, pk, sk, expressions, values } = args;
     const cnt = Object.keys(values).length;
-    if(expressions.length === 0 || cnt === 0 ){
+    if (expressions.length === 0 || cnt === 0) {
         throw new Error('We must have expressions, and values to update.')
     }
-    if(expressions.length !== cnt ){
+    if (expressions.length !== cnt) {
         throw new Error('We should have same count of expressions, and values.')
     }
 
@@ -147,12 +147,12 @@ export const updateItem = async (args: updateItemArgs) => {
 }
 
 export const queryByPkSkPrefix = async <T = unknown>(args: queryItemArg): Promise<T[]> => {
-    const {table, pk, sk_prefix, limit} = args;
+    const { table, pk, sk_prefix, limit } = args;
     let expression = `pk = :pk `;
     const attrValue: any = {
         ":pk": pk,
     };
-    if(sk_prefix){
+    if (sk_prefix) {
         expression = `${expression} AND begins_with(sk, :sk_prefix)`;
         attrValue[":sk_prefix"] = sk_prefix;
     }
@@ -164,5 +164,5 @@ export const queryByPkSkPrefix = async <T = unknown>(args: queryItemArg): Promis
         Limit: limit
     })
     const queryRes = await docClient.send(cmd);
-    return (queryRes.Items||[]).map(c=>c as T)
+    return (queryRes.Items || []).map(c => c as T)
 }

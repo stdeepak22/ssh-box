@@ -2,20 +2,29 @@
     "name": "@ssh-box/cli",
     "version": "1.0.0",
     "main": "dist/index.js",
+    "files": [
+        "dist"
+    ],
     "bin": {
         "ssh-box": "./dist/index.js"
     },
     "scripts": {
+        "prepublishOnly": "npm run clean-build",
+        "clean": "rm -r dist",
         "build": "tsc",
+        "clean-build": "npm run clean;npm run build",
         "start": "node dist/index.js"
     },
     "dependencies": {
-        "@ssh-box/common": "*",
+        "@ssh-box/common_helper": "*",
+        "@ssh-box/common_types": "*",
+        "@ssh-box/zero-vault": "*",
         "chalk": "^4.1.2",
         "commander": "^11.1.0",
         "conf": "^10.2.0",
         "inquirer": "^8.2.5",
-        "ora": "^5.4.1"
+        "ora": "^5.4.1",
+        "string-argv": "^0.3.2"
     },
     "devDependencies": {
         "@types/inquirer": "^9.0.7",

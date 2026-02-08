@@ -6,14 +6,14 @@ WORKDIR /app
 COPY package*.json ./
 
 # Copy packages
-COPY packages/common ./packages/common
+COPY packages/common/types ./packages/common/types
 COPY packages/backend ./packages/backend
 
 # Install dependencies (reproducible build)
 RUN npm ci
 
 # Build common
-WORKDIR /app/packages/common
+WORKDIR /app/packages/common/types
 RUN npm run build
 
 # Build backend

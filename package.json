@@ -3,7 +3,8 @@
   "type": "module",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "packages/common/*"
   ],
   "scripts": {
     "test": "npm test --workspaces",

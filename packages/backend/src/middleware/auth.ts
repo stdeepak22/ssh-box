@@ -9,15 +9,49 @@ export interface AuthRequest extends Request {
     };
 }
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+export enum AuthStatus {
+    Unauthorized_401,
+    Forbidden_403,
+    Authorized,
+}
+
+export const isAuthenticated = async (req: AuthRequest): Promise<{
+    isAuthorized: AuthStatus,
+    tokenData?: {email: string}
+}> => {
+    let isAuth = AuthStatus.Unauthorized_401; 
+    let tokenData;
+
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (token == null) return res.sendStatus(401);
+    if (token){
+        jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+            if (err){
+                isAuth = AuthStatus.Forbidden_403;
+            } else {
+                isAuth = AuthStatus.Authorized;
+                tokenData = user as { email: string };;
+            }
+        });
+    }
+    return {
+        isAuthorized:isAuth,
+        tokenData,
+    }
+}
 
-    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-        if (err) return res.sendStatus(403);
-        req.user = user as { email: string };
+export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const {isAuthorized, tokenData} = await isAuthenticated(req);
+
+    if(isAuthorized === AuthStatus.Authorized){
+        req.user = tokenData;
         next();
-    });
+    } else {
+        res.sendStatus(
+            isAuthorized === AuthStatus.Unauthorized_401 
+            ? 401
+            : 403
+        );
+    }
 };
