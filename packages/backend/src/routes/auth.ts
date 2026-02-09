@@ -3,22 +3,33 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getItem, putItem, TableNames, updateItem } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { registrationLimiter, loginLimiter, setMasterLimiter } from '../middleware/rate-limiter';
 import { DbUser, EncryptionParts } from '@ssh-box/common_types';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-
 
 const getPk = (email: string) => `USER#${email}`
 const getSk = () => `CRED`
 const getMpSk = () => `MP`
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', registrationLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password required' });
+        }
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
+        // Basic password validation
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters long' });
         }
 
         // Check if user exists
@@ -29,6 +40,7 @@ router.post('/register', async (req, res) => {
         })
 
         if (user) {
+            console.log(`Registration attempt failed - User already exists: ${email}`);
             return res.status(409).json({ error: 'User already exists' });
         }
 
@@ -58,15 +70,16 @@ router.post('/register', async (req, res) => {
             }
         })
 
+        console.log(`User created successfully: ${email}`);
         res.status(201).json({ message: 'User created' });
     } catch (err) {
-        console.error(err);
+        console.error(`Registration error:`, err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -95,7 +108,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Set Master Password Verifier (Zero-Knowledge)
-router.post('/set-master', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/set-master', authenticateToken, setMasterLimiter, async (req: AuthRequest, res) => {
     try {
         const email = req.user!.email;
         const { salt, iv, ct } = req.body as EncryptionParts; // { salt, iv, ct }

@@ -1,6 +1,7 @@
 import express from 'express';
 import { queryByPkSkPrefix, TableNames, PkSk, batchGetItems, putItem, getItem, updateItem } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { addSecretLimiter } from '../middleware/rate-limiter';
 import { DbSecretMetadata, DbSecret } from '@ssh-box/common_types';
 
 
@@ -103,7 +104,7 @@ router.get('/', async (req: AuthRequest, res) => {
 const MAX_VERSIONS = 5;
 
 // Create new secret
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', addSecretLimiter, async (req: AuthRequest, res) => {
     try {
         const email = req.user!.email;
         const { name, ct, salt, iv } = req.body;
