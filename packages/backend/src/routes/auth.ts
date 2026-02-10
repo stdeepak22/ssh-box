@@ -5,9 +5,9 @@ import { getItem, putItem, TableNames, updateItem } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { registrationLimiter, loginLimiter, setMasterLimiter } from '../middleware/rate-limiter';
 import { DbUser, EncryptionParts } from '@ssh-box/common_types';
+import { JWT_SECRET } from '../constants';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 const getPk = (email: string) => `USER#${email}`
 const getSk = () => `CRED`
