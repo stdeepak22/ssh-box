@@ -128,4 +128,12 @@ export class MasterPasswordHelper {
         }
         return false;
     }
+
+    async getUnlockStatus(){
+        return VaultService.getUnlockStatus();
+    }
+
+    async lockVault(){
+        return VaultService.lock();
+    }
 }   

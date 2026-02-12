@@ -19,7 +19,7 @@ export interface LoginResponse extends ServerRequest {
 export interface SecretDetail {
     name: string,
     version: string,
-    history?: string,
+    totalVersions?: number,
     createdAt?: string,
     updatedAt?: string,
 }

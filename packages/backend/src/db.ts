@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand, GetCommand, BatchGetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, UpdateCommand, GetCommand, BatchGetCommand, PutCommand, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
 const region = process.env.AWS_REGION || "us-east-1";
 const endpoint = process.env.DYNAMODB_ENDPOINT;
@@ -55,9 +55,9 @@ interface batchGetItemsOutput<T> {
     }[]
 }
 
-interface putItemArg {
+interface putItemArg<T> {
     table: TableNames,
-    item: PkSk & { [key: string]: any }
+    item: T
 }
 
 interface queryItemArg {
@@ -65,6 +65,10 @@ interface queryItemArg {
     pk: string,
     sk_prefix?: string,
     limit?: number
+}
+
+interface deleteItemArgs extends PkSk {
+    table: TableNames;
 }
 
 interface updateItemArgs extends PkSk {
@@ -76,7 +80,7 @@ interface updateItemArgs extends PkSk {
 }
 
 
-export type { PkSk, getItemArg, batchGetItemsArg, putItemArg, queryItemArg, updateItemArgs }
+export type { PkSk, getItemArg, batchGetItemsArg, putItemArg, queryItemArg, deleteItemArgs, updateItemArgs }
 
 export const getItem = async <T = unknown>(args: getItemArg) => {
     const { table, pk, sk } = args;
@@ -118,11 +122,20 @@ export const batchGetItems = async<T = unknown>(args: batchGetItemsArg): Promise
     };
 }
 
-export const putItem = async (args: putItemArg) => {
+export const putItem = async <T extends PkSk>(args: putItemArg<T>) => {
     const { table, item } = args;
     await docClient.send(new PutCommand({
         TableName: getTableName(table),
         Item: item
+    }));
+}
+
+export const deleteItem = async (args: deleteItemArgs) => {
+    const {table, pk, sk} = args;
+
+     await docClient.send(new DeleteCommand({
+        TableName: getTableName(table),
+        Key: { pk, sk}
     }));
 }
 

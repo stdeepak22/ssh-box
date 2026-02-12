@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import ora from 'ora';
 import chalk from 'chalk';
-import { helper, authStorage } from '../utils/shared-instance';
+import { helper, authStorage, getRelativeTime } from '../utils/shared-instance';
 
 export async function register() {
     const { email, password } = await inquirer.prompt([
@@ -86,8 +86,30 @@ export async function unlockVault() {
     ]);
     const hasUnlocked = await helper.unlockVault(password);
     if (hasUnlocked) {
-        ora('Master Password verified.').succeed();
+        ora('Master Password verified. Vault is unlocked 🔓').succeed();
         return;
     }
     ora('Invalid master password.').fail();
+}
+
+export async function isVaultUnlocked() {
+    const res = await helper.getUnlockStatus();
+    let msg = `Something went wrong, can not get Vault status now.`;
+    if(res){
+        const {is_unlock, lock_at_timestamp} = res;
+        msg = `Vault is ${is_unlock ? 'unlocked 🔓' : 'locked 🔒'}`;
+        if(is_unlock) {
+            msg += `, and will be locked ${chalk.green(getRelativeTime(lock_at_timestamp))}.`
+        }
+    }
+    ora(msg).succeed();
+}
+
+export async function lockVault() {
+    const hasUnlocked = await helper.lockVault();
+    if (hasUnlocked) {
+        ora('Vault has been locked 🔒').succeed();
+        return;
+    }
+    ora('Vault is locked 🔒').info();
 }

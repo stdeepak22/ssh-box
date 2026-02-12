@@ -6,7 +6,9 @@ import { AuthConfigStorage } from './config';
 import { parseArgsStringToArgv } from 'string-argv';
 import { setAuthStorageService, setHelpr } from './utils/shared-instance';
 import { Helper } from '@ssh-box/common_helper';
+import dotenv from 'dotenv'
 const s = ora();
+dotenv.config({quiet:true});
 
 async function startShell() {
     const auth = new AuthConfigStorage('http://localhost:3000');

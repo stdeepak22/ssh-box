@@ -1,12 +1,21 @@
 let cachedKey: CryptoKey | null = null;
 let timeoutId:any = null;
-let INACTIVITY_LIMIT = 30000; // 30 seconds
+let DEFAULT_LIMIT = 30_000; // 30sec
+let INACTIVITY_LIMIT:number | undefined = undefined
 const vaultBus = new EventTarget();
 const LOCK_EVENT = "vault-locked";
+let lock_at = Date.now();
 
 export const SessionManager = {
-    configureTimeout(msTime: number) {
-        INACTIVITY_LIMIT = msTime;
+    getTimeout() {
+        if(!INACTIVITY_LIMIT){
+            const fromEnv = Number(process.env.VAULT_UNLOCK_TIMEOUT);
+            if (fromEnv && !isNaN(fromEnv)) {
+                INACTIVITY_LIMIT = fromEnv;
+            }
+            INACTIVITY_LIMIT = INACTIVITY_LIMIT || DEFAULT_LIMIT;
+        }
+        return INACTIVITY_LIMIT;
     },
 
     setKey(key: CryptoKey) {
@@ -25,9 +34,12 @@ export const SessionManager = {
 
     resetTimer() {
         if (timeoutId) clearTimeout(timeoutId);
+        const timeoutTime = this.getTimeout();
+
+        lock_at = Date.now() + timeoutTime;
         timeoutId = setTimeout(() => {
             this.lock();
-        }, INACTIVITY_LIMIT);
+        }, timeoutTime);
 
         // so it will not make main process wait to finish this, mainly used in node env, like CLI
         if (timeoutId && typeof timeoutId.unref === 'function') {
@@ -43,18 +55,32 @@ export const SessionManager = {
         return () => vaultBus.removeEventListener(LOCK_EVENT, callback);
     },
 
+    getUnlockStatus() : {
+        is_unlock: boolean,
+        lock_at_timestamp: number
+    } {
+        return {
+            is_unlock: (lock_at - Date.now()) > 0,
+            lock_at_timestamp: lock_at,
+        };
+    },
+
     lock() {
         if (!cachedKey) {
-            console.log("Vault is already locked.");
-            return;
+            return false;
         }
         if (timeoutId) {
             clearTimeout(timeoutId);
         }
+        if(lock_at > Date.now()){
+            lock_at = Date.now();
+        }
         cachedKey = null;
-        console.log("Vault is locked.");
-
+        
         // dispatch events
-        vaultBus.dispatchEvent(new Event(LOCK_EVENT));
+        setTimeout(()=>{
+            vaultBus.dispatchEvent(new Event(LOCK_EVENT));
+        });
+        return true;
     }
 };

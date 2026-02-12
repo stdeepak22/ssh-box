@@ -37,6 +37,14 @@ export class Helper {
         return this._masterPasswordHelper?.unlockVault(password);
     }
 
+    async getUnlockStatus() {
+        return this._masterPasswordHelper?.getUnlockStatus();
+    }
+
+    async lockVault() {
+        return this._masterPasswordHelper?.lockVault();
+    }
+
     async setPassword(newPassword: string) {
         return this._masterPasswordHelper?.setPassword(newPassword);
     }

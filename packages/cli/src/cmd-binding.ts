@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { register, login, logout, whoami, unlockVault } from './commands/auth';
+import { register, login, logout, whoami, unlockVault, lockVault, isVaultUnlocked } from './commands/auth';
 import { addSecret } from './commands/add';
 import { getSecret } from './commands/get';
 import { listSecrets } from './commands/list';
@@ -22,10 +22,20 @@ program
     .description('to check if connection with server is available, and its authenticated or not.')
     .action(ping_pong);
 
-    program
-    .command('unlock-vault')
-    .description('unlock the vault.')
+program
+    .command('unlock')
+    .description('unlock 🔓 the vault.')
     .action(unlockVault);
+
+program
+    .alias("lock")
+    .description('lock 🔒 the vault.')
+    .action(lockVault);
+
+program
+    .command('vault')
+    .description('check if vault is locked or unlocked.')
+    .action(isVaultUnlocked);
 
 program
     .command('register')

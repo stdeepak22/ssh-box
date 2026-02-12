@@ -1,6 +1,12 @@
 import ora from 'ora';
-import { helper } from '../utils/shared-instance';
+import { getRelativeTime, helper } from '../utils/shared-instance';
 import { SecretDetail } from '@ssh-box/common_helper';
+import Table from 'cli-table';
+
+
+var table = new Table({
+    head: ['Name', 'Version', 'Total Versions', 'Created', 'Updated']
+});
 
 export async function listSecrets() {
 
@@ -21,20 +27,23 @@ export async function listSecrets() {
         }
         spinner.succeed(msg);
 
-        console.log('\n--- Your Secrets (SSH Box) ---');
-        console.table(secrets.map((s: SecretDetail) => ({
-            Name: s.name,
-            Version: s.version,
-            History: s.history,
-            'Created': s.createdAt ? new Date(s.createdAt).toLocaleString() : '-',
-            'Modified': s.updatedAt ?  new Date(s.updatedAt).toLocaleString() : '-',
-        })));
-        console.log('------------------------------\n');
+        const rows = secrets.map((s: SecretDetail) => [
+            s.name,
+            s.version,
+            (s.totalVersions || 1).toString(),
+            s.createdAt ? getRelativeTime(new Date(s.createdAt).getTime()) || '': '-',
+            s.updatedAt ?  getRelativeTime(new Date(s.updatedAt).getTime()) || '' : '-',
+        ]);
+
+        table.length = 0;
+        table.push(...rows);
+        
+        console.log(table.toString());
 
     } catch (error: any) {
         if (spinner.isSpinning){
             spinner.stop();
         }
-        console.error(`Failed to list secrets: ${error.message}`);
+        spinner.fail(error.message);
     }
 }

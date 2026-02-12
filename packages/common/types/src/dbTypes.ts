@@ -7,7 +7,7 @@ export interface TableType {
 export interface DbUser extends TableType {
     passwordHash: string;
     has_mp: boolean;
-    createdAt: string;
+    cAt: string;
 }
 
 
@@ -15,8 +15,9 @@ export interface DbUser extends TableType {
 export interface DbSecretMetadata extends TableType {
     cv: number; // current version
     v: number[]; // all versions
-    createdAt: string;
-    updatedAt: string;
+    vc: number; // version count
+    cAt: string;
+    uAt?: string;
 }
 
 // USER#{email} | S#{key}#{version}
@@ -26,5 +27,5 @@ export interface DbSecret extends TableType {
     ct: string; // encrypted content
     salt: string;
     iv: string;
-    createdAt: string;
+    cAt: string;
 }

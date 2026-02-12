@@ -3,15 +3,9 @@ import { SessionManager } from "./session.manager.js";
 import { EncryptionParts, ReWrapDEKWithNew } from "./types.js";
 import { UnlockedVaultNeeded, UnlockVaultNeededResult } from "./decorators/unlocked.vault.needed.js";
 
-
-
-export class VaultService {
-    static async configureTimeout(msTime: number){
-        SessionManager.configureTimeout(msTime);
-    }
-
-    static async isUnlocked() {
-        return !!SessionManager.getKey();
+export class VaultService {    
+    static async getUnlockStatus() {
+        return SessionManager.getUnlockStatus();
     }
 
     /**
@@ -26,6 +20,10 @@ export class VaultService {
         } catch (error) {
             return false;
         }
+    }
+
+    static async lock() {
+        return SessionManager.lock();
     }
 
     /**
@@ -67,7 +65,4 @@ export class VaultService {
         return await VaultManager.wrapDEK(password);
     }
 
-    static lock() {
-        SessionManager.lock();
-    }
 }

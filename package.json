@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "test": "npm test --workspaces",
-    "build": "npm run build --workspaces"
+    "build": "npm run build --workspaces",
+    "build-common": "cd ./packages/common/types; npm run clean-build; cd ../zero-vault;npm run clean-build;cd ../helper; npm run clean-build; cd ../../.."
   }
 }

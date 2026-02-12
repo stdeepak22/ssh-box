@@ -20,13 +20,16 @@
         "@ssh-box/common_types": "*",
         "@ssh-box/zero-vault": "*",
         "chalk": "^4.1.2",
+        "cli-table": "^0.3.11",
         "commander": "^11.1.0",
         "conf": "^10.2.0",
+        "dotenv": "^17.2.4",
         "inquirer": "^8.2.5",
         "ora": "^5.4.1",
         "string-argv": "^0.3.2"
     },
     "devDependencies": {
+        "@types/cli-table": "^0.3.4",
         "@types/inquirer": "^9.0.7",
         "@types/node": "^20.11.0",
         "typescript": "^5.3.3"
