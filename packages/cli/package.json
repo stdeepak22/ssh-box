@@ -19,6 +19,7 @@
         "@ssh-box/common_helper": "*",
         "@ssh-box/common_types": "*",
         "@ssh-box/zero-vault": "*",
+        "boxen": "^8.0.1",
         "chalk": "^4.1.2",
         "cli-table": "^0.3.11",
         "commander": "^11.1.0",
