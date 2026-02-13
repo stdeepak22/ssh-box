@@ -2,21 +2,43 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 import { getHelpr } from '../utils/shared-instance';
 
-export async function restoreSecret(nameWithVersion: string, options: { ver?: string }) {
-    if (!nameWithVersion) {
-        console.error('Error: Secret name is required.');
-        return;
-    }
+export async function restoreSecret(nameWithVersion?: string) {
+    let name = nameWithVersion;
+    let targetVersion: string | undefined;
 
     // Extract version from the name string if provided (e.g., "mysecret:-1" for previous version)
-    // or use the option parameter
-    const name = nameWithVersion.split(':').shift() || nameWithVersion;
-    const versionFromName = nameWithVersion.includes(':') ? nameWithVersion.split(':').pop() : undefined;
-    const targetVersion = versionFromName || options.ver;
+    if (name && name.includes(':')) {
+        const parts = name.split(':');
+        name = parts[0];
+        targetVersion = parts[1];
+    }
 
-    const versionText = targetVersion ? `version ${targetVersion}` : 'latest version';
-    
-    // 1. Confirm restoration before making any API calls
+    // Prompt for name if not provided
+    if (!name) {
+        const answer = await inquirer.prompt([{
+            type: 'input',
+            name: 'name',
+            message: 'Secret name to restore:',
+            validate: (input) => input.length > 0 || 'Name is required'
+        }]);
+        name = answer.name;
+    }
+
+    // Prompt for version if not provided
+    if (!targetVersion) {
+        const answer = await inquirer.prompt([{
+            type: 'input',
+            name: 'version',
+            message: 'Version to restore (e.g., -1 for previous, -2 for 2 versions ago):',
+            default: '-1',
+            validate: (input) => input.length > 0 || 'Version is required'
+        }]);
+        targetVersion = answer.version;
+    }
+
+    const versionText = `version ${targetVersion}`;
+
+    // Confirm restoration before making any API calls
     const { confirm } = await inquirer.prompt([
         {
             type: 'confirm',
@@ -32,7 +54,7 @@ export async function restoreSecret(nameWithVersion: string, options: { ver?: st
     }
 
     const spinner = ora(`Restoring ${versionText} of "${name}"...`).start();
-    
+
     try {
         const helper = getHelpr();
         if (!helper) {
@@ -40,8 +62,8 @@ export async function restoreSecret(nameWithVersion: string, options: { ver?: st
             return;
         }
 
-        // 2. Direct restoration - let server handle existence check and version resolution
-        const restoreResult = await helper.restoreSecret?.(name, targetVersion);
+        // Direct restoration - let server handle existence check and version resolution
+        const restoreResult = await helper.restoreSecret?.(name!, targetVersion);
         if (!restoreResult) {
             spinner.fail('Helper method not available.');
             return;

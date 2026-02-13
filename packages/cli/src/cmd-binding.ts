@@ -72,14 +72,12 @@ program
     .command('add')
     .alias('create')
     .description(`${chalk.gray('Add a new secret to your vault')}`)
-    .argument('<name>', 'Name of the secret')
+    .argument('[name]', 'Name of the secret')
     .argument('[value]', 'Value of the secret (optional)')
-    .option('-f, --file <path>', 'Read secret value from file')
     .addHelpText('after', `
 ${chalk.yellow('Examples:')}
   ${chalk.cyan('ssh-box > add')} ${chalk.gray('my-api-key "sk-123456"')}
-  ${chalk.cyan('ssh-box > add')} ${chalk.gray('private-key -f ~/.ssh/id_rsa')}
-  ${chalk.cyan('ssh-box > add')} ${chalk.gray('mysecret')} ${chalk.gray('(will prompt for value)')}
+  ${chalk.cyan('ssh-box > add')} ${chalk.gray('(will prompt for name and value)')}
 `)
     .action(addSecret);
 
@@ -88,12 +86,13 @@ program
     .alias('show')
     .alias('view')
     .description(`${chalk.gray('Retrieve and decrypt a secret')}`)
-    .argument('<name>', 'Name of the secret to retrieve')
-    .option('-v, --ver <version>', 'Specific version to retrieve (e.g., -1, -2)')
+    .argument('[name]', 'Name of the secret to retrieve (supports name@version or name:version format)')
     .addHelpText('after', `
 ${chalk.yellow('Examples:')}
   ${chalk.cyan('ssh-box > get')} ${chalk.gray('my-api-key')}
-  ${chalk.cyan('ssh-box > get')} ${chalk.gray('my-api-key --ver -1')} ${chalk.gray('(get previous version)')}
+  ${chalk.cyan('ssh-box > get')} ${chalk.gray('my-api-key:-1')} ${chalk.gray('(get previous version)')}
+  ${chalk.cyan('ssh-box > get')} ${chalk.gray('my-api-key:-2')} ${chalk.gray('(get 2 versions ago)')}
+  ${chalk.cyan('ssh-box > get')} ${chalk.gray('(will prompt for name)')}
 `)
     .action(getSecret);
 
@@ -121,9 +120,12 @@ program
     .alias('delete')
     .alias('del')
     .description(`${chalk.gray('Permanently delete a secret')}`)
-    .argument('<name>', 'Name of the secret to delete')
+    .argument('[name]', 'Name of the secret to delete')
     .addHelpText('after', `
 ${chalk.yellow('⚠️  Warning:')} This action cannot be undone!
+${chalk.yellow('Examples:')}
+  ${chalk.cyan('ssh-box > remove')} ${chalk.gray('mysecret')}
+  ${chalk.cyan('ssh-box > remove')} ${chalk.gray('(will prompt for name)')}
 `)
     .action(removeSecret);
 
@@ -131,13 +133,13 @@ program
     .command('restore')
     .alias('rollback')
     .description(`${chalk.gray('Restore a previous version as the latest')}`)
-    .argument('<name>', 'Name of the secret to restore')
-    .option('-v, --ver <ver>', 'Version number (-1 = previous, -2 = 2 versions ago, etc.)')
+    .argument('[name]', 'Name of the secret to restore (supports name:version format)')
     .addHelpText('after', `
 ${chalk.yellow('Examples:')}
   ${chalk.cyan('ssh-box > restore')} ${chalk.gray('mysecret')} ${chalk.gray('(restore latest)')}
-  ${chalk.cyan('ssh-box > restore')} ${chalk.gray('mysecret --ver -1')} ${chalk.gray('(restore previous)')}
-  ${chalk.cyan('ssh-box > restore')} ${chalk.gray('mysecret --ver -2')} ${chalk.gray('(restore 2 versions ago)')}
+  ${chalk.cyan('ssh-box > restore')} ${chalk.gray('mysecret:-1')} ${chalk.gray('(restore previous)')}
+  ${chalk.cyan('ssh-box > restore')} ${chalk.gray('mysecret:-2')} ${chalk.gray('(restore 2 versions ago)')}
+  ${chalk.cyan('ssh-box > restore')} ${chalk.gray('(will prompt for name and version)')}
 `)
     .action(restoreSecret);
 

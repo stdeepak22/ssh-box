@@ -26,6 +26,7 @@
         "conf": "^10.2.0",
         "dotenv": "^17.2.4",
         "inquirer": "^8.2.5",
+        "inquirer-autocomplete-prompt": "^2.0.1",
         "ora": "^5.4.1",
         "string-argv": "^0.3.2"
     },

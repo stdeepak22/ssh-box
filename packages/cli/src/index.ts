@@ -10,6 +10,10 @@ import { setAuthStorageService, setHelpr } from './utils/shared-instance';
 import { Helper } from '@ssh-box/common_helper';
 import dotenv from 'dotenv';
 
+// Register autocomplete prompt
+const autocomplete = require('inquirer-autocomplete-prompt');
+inquirer.registerPrompt('autocomplete', autocomplete);
+
 dotenv.config({ quiet: true });
 
 const s = ora();
@@ -48,6 +52,34 @@ const commandCategories = {
     { name: 'clear', desc: 'Clear screen', cmd: 'clear' },
   ],
 };
+
+// Flat list of all commands for autocomplete
+const allCommands = Object.values(commandCategories).flat().map(cmd => ({
+  name: `${chalk.cyan(cmd.name.padEnd(12))} ${chalk.gray(cmd.desc)}`,
+  value: cmd.cmd,
+  short: cmd.name
+}));
+
+// Autocomplete search function
+function searchCommands(input: string) {
+  // Return empty array when no input (don't show full list initially)
+  if (!input || input.trim() === '') {
+    return [];
+  }
+  
+  const searchTerm = input.toLowerCase().trim();
+  const matches = allCommands.filter(cmd => 
+    cmd.value.toLowerCase().includes(searchTerm) ||
+    cmd.short.toLowerCase().includes(searchTerm)
+  );
+  
+  // Also add help and exit options
+  return [
+    ...matches,
+    { name: chalk.gray('help'), value: 'help', short: 'help' },
+    { name: chalk.gray('exit'), value: 'exit', short: 'exit' }
+  ];
+}
 
 function showHelp() {
   console.log(boxen(logo, { padding: 1, borderStyle: 'round', borderColor: 'cyan' }));
@@ -175,17 +207,26 @@ async function startShell() {
 
   while (true) {
     try {
+      // First prompt with autocomplete
       const { user_input } = await inquirer.prompt([
         {
-          type: 'input',
+          type: 'autocomplete',
           name: 'user_input',
           message: chalk.cyan('ssh-box'),
-          prefix: chalk.gray('❯')
+          searchText: 'Searching',
+          prefix: '',
+          source: (_answers: any, input: string | undefined) => {
+            return Promise.resolve(searchCommands(input || ''));
+          },
+          pageSize: 10,
+          emptyText: ' ',
+          suggestOnly: true
         }
       ]);
 
-      const input = user_input.trim();
+      let input = user_input.trim();
 
+      // If user pressed Enter without typing (empty input), show category menu
       if (!input) {
         // Empty input - show interactive menu
         let selectedCmd = await showInteractiveMenu();

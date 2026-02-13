@@ -2,18 +2,26 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 import { getHelpr } from '../utils/shared-instance';
 
-export async function removeSecret(name: string) {
-    if (!name) {
-        console.error('Error: Secret name is required.');
-        return;
+export async function removeSecret(name?: string) {
+    let secretName = name;
+
+    // Prompt for name if not provided
+    if (!secretName) {
+        const answer = await inquirer.prompt([{
+            type: 'input',
+            name: 'name',
+            message: 'Secret name to remove:',
+            validate: (input) => input.length > 0 || 'Name is required'
+        }]);
+        secretName = answer.name;
     }
 
-    // 1. Confirm deletion before making any API calls
+    // Confirm deletion before making any API calls
     const { confirm } = await inquirer.prompt([
         {
             type: 'confirm',
             name: 'confirm',
-            message: `Are you sure you want to delete "${name}" and all its versions?`,
+            message: `Are you sure you want to delete "${secretName}" and all its versions?`,
             default: false
         }
     ]);
@@ -23,8 +31,8 @@ export async function removeSecret(name: string) {
         return;
     }
 
-    const spinner = ora(`Deleting "${name}"...`).start();
-    
+    const spinner = ora(`Deleting "${secretName}"...`).start();
+
     try {
         const helper = getHelpr();
         if (!helper) {
@@ -32,15 +40,15 @@ export async function removeSecret(name: string) {
             return;
         }
 
-        // 2. Direct deletion - let server handle existence check
-        const deleteResult = await helper.removeSecret?.(name);
+        // Direct deletion - let server handle existence check
+        const deleteResult = await helper.removeSecret?.(secretName!);
         if (!deleteResult) {
             spinner.fail('Helper method not available.');
             return;
         }
 
         if (deleteResult.success) {
-            spinner.succeed(`Secret "${name}" deleted successfully.`);
+            spinner.succeed(`Secret "${secretName}" deleted successfully.`);
         } else {
             spinner.fail(`Failed to delete secret: ${deleteResult.error || 'Unknown error'}`);
         }

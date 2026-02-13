@@ -1,34 +1,45 @@
-import fs from 'fs';
-import path from 'path';
 import ora from 'ora';
+import inquirer from 'inquirer';
 import { helper } from '../utils/shared-instance';
 
-
-
-export async function addSecret(name: string, value: string | undefined, options: { file?: string }) {
-    
+export async function addSecret(name?: string, value?: string) {
+    let secretName = name;
     let content = value;
 
-    if (!content && options.file) {
-        const filePath = path.resolve(options.file);
-        if (!fs.existsSync(filePath)) {
-            console.error(`File not found: ${filePath}`);
-            return;
-        }
-        content = fs.readFileSync(filePath, 'utf8');
+    // Prompt for name if not provided
+    if (!secretName) {
+        const answer = await inquirer.prompt([{
+            type: 'input',
+            name: 'name',
+            message: 'Secret name:',
+            validate: (input) => input.length > 0 || 'Name is required'
+        }]);
+        secretName = answer.name;
     }
 
+    // Prompt for value if not provided
     if (!content) {
-        console.error('Error: You must provide either a secret value as an argument or a file path via -f');
+        const answer = await inquirer.prompt([{
+            type: 'password',
+            name: 'value',
+            message: 'Secret value:',
+            mask: '•',
+            validate: (input) => input.length > 0 || 'Value is required'
+        }]);
+        content = answer.value;
+    }
+
+    if (!secretName || !content) {
+        console.error('Error: Both name and value are required');
         return;
     }
 
     const spinner = ora('Encrypting...').start();
 
     try {
-        spinner.text = 'Uploading...';        
-        const res = await helper.saveSecret(name, content);
-        if(res?.success){
+        spinner.text = 'Uploading...';
+        const res = await helper.saveSecret(secretName, content);
+        if (res?.success) {
             spinner.succeed('Secret added successfully!');
         } else {
             spinner.fail(res?.error || 'Failed to add secret.');
