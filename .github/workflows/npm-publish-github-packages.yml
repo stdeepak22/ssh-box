@@ -30,7 +30,11 @@ jobs:
         with:
           node-version: 20
           registry-url: https://npm.pkg.github.com/
+          scope: '@ssh-box'
       - run: npm ci
-      - run: npm publish
+      # Publish only the CLI package
+      - name: Publish CLI
+        run: npm publish
+        working-directory: ./packages/cli # Adjust this path to your CLI folder
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}

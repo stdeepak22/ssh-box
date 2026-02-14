@@ -8,6 +8,9 @@
     "bin": {
         "ssh-box": "./dist/cli.js"
     },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    },
     "scripts": {
         "prepublishOnly": "npm run clean;npm run build-for-publish;",
         "clean": "rm -r dist",
