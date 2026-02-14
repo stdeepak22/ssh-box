@@ -1,21 +1,22 @@
 {
     "name": "@ssh-box/cli",
     "version": "1.0.0",
-    "main": "dist/index.js",
+    "main": "dist/cli.js",
     "files": [
         "dist"
     ],
     "bin": {
-        "ssh-box": "./dist/index.js"
+        "ssh-box": "./dist/cli.js"
     },
     "scripts": {
-        "prepublishOnly": "npm run clean-build",
+        "prepublishOnly": "npm run clean;npm run build-for-publish;",
         "clean": "rm -r dist",
         "build": "tsc",
+        "build-for-publish": "node build.js",
         "clean-build": "npm run clean;npm run build",
         "start": "node dist/index.js"
     },
-    "dependencies": {
+    "devDependencies": {
         "@inquirer/prompts": "^8.2.0",
         "@ssh-box/common_helper": "*",
         "@ssh-box/common_types": "*",
@@ -27,11 +28,10 @@
         "conf": "^10.2.0",
         "dotenv": "^17.2.4",
         "ora": "^5.4.1",
-        "string-argv": "^0.3.2"
-    },
-    "devDependencies": {
+        "string-argv": "^0.3.2",
         "@types/cli-table": "^0.3.4",
         "@types/node": "^20.11.0",
+        "esbuild": "^0.27.3",
         "typescript": "^5.3.3"
     }
 }

@@ -9,8 +9,12 @@ import { parseArgsStringToArgv } from 'string-argv';
 import { setAuthStorageService, setHelpr } from './utils/shared-instance';
 import { Helper } from '@ssh-box/common_helper';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config({ quiet: true });
+dotenv.config({ 
+  quiet:true,
+  path: path.join(__dirname, '.env')
+});
 
 const s = ora();
 
@@ -78,7 +82,11 @@ function searchCommands(input: string) {
     ];
   }
   
-  const searchTerm = input.toLowerCase().trim();
+  let searchTerm = input.toLowerCase().trim();
+
+  //command may be other parts like "get [SECRET_NAME]" so ideally we should search by first part only.
+  searchTerm = searchTerm.split(' ')[0];
+
   const matches: any[] = [];
   
   const remainingToSearch: any[] = [];
@@ -97,15 +105,9 @@ function searchCommands(input: string) {
       }
     }
   );
-  
-  // Add user's input as first option so they can submit what they typed
-  const userInputOption = { name: chalk.cyan(`> ${input}`), value: input };
 
   // Also add help and exit options
-  return [
-    // userInputOption,
-    ...matches,
-  ];
+  return matches;
 }
 
 function showHelp() {
@@ -200,7 +202,7 @@ async function getCommandWithArgs(command: string): Promise<string | null> {
 }
 
 async function startShell() {
-  const auth = new AuthConfigStorage('http://localhost:3000');
+  const auth = new AuthConfigStorage(process.env.BASE_URL);
   setAuthStorageService(auth);
   setHelpr(Helper.getInstance(auth));
 
@@ -221,8 +223,6 @@ async function startShell() {
           return Promise.resolve(searchCommands(term || ''));
         }
       });
-
-      console.log("Deepak::", userInput);
 
       let input = userInput.trim();
 

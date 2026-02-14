@@ -6,6 +6,9 @@ node_modules
 # Testing
 coverage
 
+approved-implementation-plans/
+ref-docs/
+
 # Production
 dist
 build

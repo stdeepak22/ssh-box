@@ -17,23 +17,18 @@ interface ConfigSchema {
 
 export class AuthConfigStorage implements AuthStorageService {
     private _config: Conf<ConfigSchema>;
-    private _baseUrl: string;
+    private _baseUrl?: string;
 
-    constructor(base_url: string) {
+    constructor(base_url?: string) {
         this._baseUrl = base_url;
         this._config = new Conf<ConfigSchema>({
             projectName: 'ssh-box',
-            defaults: {
-                [ConfigSchemaProps.baseUrl]: this._baseUrl,
-                [ConfigSchemaProps.token]: undefined,
-                [ConfigSchemaProps.email]: undefined,
-                [ConfigSchemaProps.has_mp]: false,
-            }
         });
+        this.reset();
     }
 
     getBaseUrl = () => {
-        return this._config.get(ConfigSchemaProps.baseUrl)?.toString() || 'http://localhost:3000/';
+        return this._config.get(ConfigSchemaProps.baseUrl)?.toString() || 'http://localhost:3000';
     }
 
     getToken = () => {
@@ -60,7 +55,15 @@ export class AuthConfigStorage implements AuthStorageService {
         this._config.set(props);
     }
 
-    clearConfig = () => {
+    reset = ()=> {
         this._config.clear();
+        this.setConfigProps({
+            [ConfigSchemaProps.baseUrl]: this._baseUrl,
+            [ConfigSchemaProps.has_mp]: false,
+        })
+    }
+
+    clearConfig = () => {
+        this.reset();
     }
 }
