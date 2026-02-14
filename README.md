@@ -1,31 +1,22 @@
 # SSH Box – Secure SSH Key Management
 
 ## Overview
-SSH Box is a secure secrets management system designed for storing and managing SSH keys and other sensitive information. This monorepo provides a complete ecosystem with CLI, backend API, and web interfaces, all built around a zero-knowledge vault architecture.
+SSH Box is a secure secrets management system designed for storing and managing SSH keys and other sensitive information. This monorepo provides a complete ecosystem with CLI, backend API, and web interfaces(coming soon), all built around a zero-knowledge vault architecture.
 
 ## Architecture
 
 ```
-┌─────────────────┐    HTTP/REST     ┌─────────────────┐     DynamoDB     ┌─────────────┐
-│   CLI Tool      │ ◄──────────────► │   Backend API   │ ◄──────────────► │             │
-│-----------------│                  │-----------------│                  │   Secrets   │
-│ - Interactive   │                  │                 │                  │   Storage   │
-│   shell         │                  │ - Auth routes   │                  │   (AWS)     │
-│ - Secret CRUD   │                  │ - Secret routes │                  │             │
-└─────────────────┘                  │ - JWT auth      │                  └─────────────┘
-                                     └─────────────────┘
-                                               ▲
-                                               │ HTTP/REST
-┌─────────────────┐                            │
-│   Web UI        │ ◄──────────────────────────┘
-│                 │
-│ (Next.js)       │
-│ - Dashboard     │
-│ - Secret mgmt   │
-└─────────────────┘
-        ▲
-        │ Shared
-        ▼
+           ┌─────────────────┐     DynamoDB     ┌─────────────┐
+           │   Backend API   │ ◄──────────────► │             │
+           │-----------------│                  │   Secrets   │
+           │                 │                  │   Storage   │
+           │ - Auth routes   │                  │   (AWS)     │
+           │ - Secret routes │                  │             │
+           │ - JWT auth      │                  └─────────────┘
+           └─────────────────┘
+                   ▲
+                   │ HTTP/REST
+                   ▼
 ┌─────────────────────────────────────────────────────────┐
 │                   Common Packages                       │
 ├─────────────────┬─────────────────┬─────────────────────┤
@@ -33,8 +24,18 @@ SSH Box is a secure secrets management system designed for storing and managing 
 │-----------------│-----------------│---------------------│
 │  - AuthResponse │ - Password      │ - Encryption        │
 │  - Encryption   │   helpers       │ - Session mgmt      │
-│  - DB schemas   │ - Auth helpers  │ - Key wrapping      │
-└─────────────────┴─────────────────┴─────────────────────┘
+│  - DB schemas   │ - Auth helpers  │ - Key wrapping      │      
+└─────────────────┴─────────────────┴─────────────────────┘                               
+        ▲                                    ▲          
+        │ HTTP/REST                          │ HTTP/REST
+        ▼                                    ▼          
+┌─────────────────┐                  ┌─────────────────┐
+│   CLI Tool      │                  │   Web UI        │ (to be done)
+│-----------------│                  │-----------------│
+│ - Interactive   │                  │ (Next.js)       │
+│   shell         │                  │ - Dashboard     │
+│ - Secret CRUD   │                  │ - Secret mgmt   │
+└─────────────────┘                  └─────────────────┘
 ```
 
 ## Modules
@@ -53,7 +54,7 @@ Express.js REST API server handling authentication and secret storage. Provides 
 - **Features:** JWT middleware, CORS support, helmet security
 - **Dependencies:** AWS SDK, JWT, Common types
 
-### 🎨 Web Package (`@ssh-box/web`)
+### 🎨 Web Package (`@ssh-box/web`) (to be done)
 Next.js web application providing a modern UI for secret management. React-based interface with Tailwind CSS styling.
 
 - **Key Pages:** Dashboard, secret management interface
@@ -86,8 +87,8 @@ Core cryptographic engine implementing zero-knowledge architecture. Handles key 
    - Auto-lock after 30 seconds of inactivity
 
 3. **Data Flow:**
-   - CLI ↔ Backend via HTTP requests
-   - Web UI ↔ Backend via REST API
+   - CLI/Web UI ↔ Common helper
+   - Common Helper ↔ Backend via REST API
    - Backend ↔ DynamoDB for persistence
    - All packages share Common types and crypto
 
