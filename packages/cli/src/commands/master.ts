@@ -1,4 +1,4 @@
-import inquirer from 'inquirer';
+import { password, confirm } from '@inquirer/prompts';
 import ora from 'ora';
 import chalk from 'chalk';
 import { ConfigSchemaProps } from '../config';
@@ -6,21 +6,30 @@ import { authStorage, helper } from '../utils/shared-instance';
 
 export async function setMasterPassword() {
 
-    let currentPassword = undefined;
+    let currentPassword: string | undefined = undefined;
     let changePassword = authStorage.getHasMp();
     if (changePassword) {
         console.log(chalk.cyan('Master password is configured, please provide it to proceed further.'));
-        ({ currentPassword } = await inquirer.prompt([
-            { type: 'password', name: 'currentPassword', message: 'Enter current Master Password:', mask: '*' },
-        ]))
+        currentPassword = await password({ 
+            message: 'Enter current Master Password:', 
+            mask: '*',
+            validate: (input) => input.length > 0 || 'Current password is required'
+        });
     }
 
-    const { password, confirmPassword } = await inquirer.prompt([
-        { type: 'password', name: 'password', message: 'Enter new Master Password:', mask: '*' },
-        { type: 'password', name: 'confirmPassword', message: 'Confirm Master Password:', mask: '*' }
-    ]);
+    const newPassword = await password({ 
+        message: 'Enter new Master Password:', 
+        mask: '*',
+        validate: (input) => input.length > 0 || 'New password is required'
+    });
+    
+    const confirmPassword = await password({ 
+        message: 'Confirm Master Password:', 
+        mask: '*',
+        validate: (input) => input.length > 0 || 'Password confirmation is required'
+    });
 
-    if (password !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
         console.error(chalk.red('Passwords do not match.'));
         return;
     }
@@ -33,9 +42,9 @@ export async function setMasterPassword() {
     try {
         
         // Zero-Knowledge: Encrypt a static string locally
-        const res = changePassword
-            ? await helper.changePassword(currentPassword, password)
-            : await helper.setPassword(password);
+        const res = changePassword && currentPassword
+            ? await helper.changePassword(currentPassword, newPassword)
+            : await helper.setPassword(newPassword);
 
         if(!res?.success){
             spinner.fail(res?.error || 'Failed to set master password');

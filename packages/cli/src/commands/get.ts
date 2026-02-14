@@ -1,5 +1,5 @@
 import ora from 'ora';
-import inquirer from 'inquirer';
+import { input } from '@inquirer/prompts';
 import { helper } from '../utils/shared-instance';
 
 export async function getSecret(nameWithVersion?: string) {
@@ -15,13 +15,10 @@ export async function getSecret(nameWithVersion?: string) {
 
     // Prompt for name if not provided
     if (!name) {
-        const answer = await inquirer.prompt([{
-            type: 'input',
-            name: 'name',
+        name = await input({ 
             message: 'Secret name to retrieve:',
             validate: (input) => input.length > 0 || 'Name is required'
-        }]);
-        name = answer.name;
+        });
     }
 
     const spinner = ora('Fetching...').start();

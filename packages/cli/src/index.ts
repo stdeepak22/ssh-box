@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import ora from 'ora';
 import { program } from './cmd-binding';
-import inquirer from 'inquirer';
+import { search, input, select } from '@inquirer/prompts';
 import chalk from 'chalk';
 import boxen from 'boxen';
 import { AuthConfigStorage } from './config';
@@ -9,10 +9,6 @@ import { parseArgsStringToArgv } from 'string-argv';
 import { setAuthStorageService, setHelpr } from './utils/shared-instance';
 import { Helper } from '@ssh-box/common_helper';
 import dotenv from 'dotenv';
-
-// Register autocomplete prompt
-const autocomplete = require('inquirer-autocomplete-prompt');
-inquirer.registerPrompt('autocomplete', autocomplete);
 
 dotenv.config({ quiet: true });
 
@@ -53,31 +49,62 @@ const commandCategories = {
   ],
 };
 
+const help_exit = [
+  { name: chalk.gray('help'), value: 'help' },
+  { name: chalk.gray('exit'), value: 'exit' }
+]
+
 // Flat list of all commands for autocomplete
 const allCommands = Object.values(commandCategories).flat().map(cmd => ({
   name: `${chalk.cyan(cmd.name.padEnd(12))} ${chalk.gray(cmd.desc)}`,
   value: cmd.cmd,
-  short: cmd.name
+  value_lower: cmd.cmd.toLowerCase().trim(),
 }));
 
-// Autocomplete search function
+// help and exit
+help_exit.forEach(c=>{
+  allCommands.push({
+    ...c,
+    value_lower: c.value.toLowerCase().trim() })  
+})
+
+// Search function for commands
 function searchCommands(input: string) {
-  // Return empty array when no input (don't show full list initially)
+  // If empty input, show menu option
   if (!input || input.trim() === '') {
-    return [];
+    return [
+      { name: chalk.yellow('Menu'), value: '__MENU__' },
+      ...help_exit
+    ];
   }
   
   const searchTerm = input.toLowerCase().trim();
-  const matches = allCommands.filter(cmd => 
-    cmd.value.toLowerCase().includes(searchTerm) ||
-    cmd.short.toLowerCase().includes(searchTerm)
+  const matches: any[] = [];
+  
+  const remainingToSearch: any[] = [];
+  allCommands.forEach(cmd => {
+      const isMatch = cmd.value_lower.startsWith(searchTerm)
+      if(isMatch){
+        matches.push(cmd);
+      } else {
+        remainingToSearch.push(cmd)
+      }
+});
+
+  remainingToSearch.forEach(cmd => {
+      if(cmd.value_lower.includes(searchTerm)) {
+        matches.push(cmd);
+      }
+    }
   );
   
+  // Add user's input as first option so they can submit what they typed
+  const userInputOption = { name: chalk.cyan(`> ${input}`), value: input };
+
   // Also add help and exit options
   return [
+    // userInputOption,
     ...matches,
-    { name: chalk.gray('help'), value: 'help', short: 'help' },
-    { name: chalk.gray('exit'), value: 'exit', short: 'exit' }
   ];
 }
 
@@ -106,48 +133,38 @@ function showHelp() {
 
 async function showInteractiveMenu() {
   // First, let user pick a category
-  const { selectedCategory } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'selectedCategory',
-      message: chalk.cyan('Select category:'),
-      choices: [
-        ...Object.keys(commandCategories).map(cat => ({
-          name: cat,
-          value: cat
-        })),
-        new inquirer.Separator(),
-        { name: chalk.gray('help'), value: 'help', short: 'help' },
-        { name: chalk.gray('exit'), value: 'exit', short: 'exit' }
-      ]
-    }
-  ]);
+  const selectedCategory = await select({
+    message: chalk.cyan('Select category:'),
+    choices: [
+      ...Object.keys(commandCategories).map(cat => ({
+        name: cat,
+        value: cat
+      })),
+      { name: chalk.gray('⏴ Back'), value: 'back' },
+      { name: chalk.gray('help'), value: 'help' },
+      { name: chalk.gray('exit'), value: 'exit' }
+    ]
+  });
 
-  if (selectedCategory === 'help' || selectedCategory === 'exit') {
+  if (selectedCategory === 'help' || selectedCategory === 'exit' || selectedCategory === 'back') {
     return selectedCategory;
   }
 
   // Then, show commands in that category
   const commands = commandCategories[selectedCategory as keyof typeof commandCategories];
-  const { selectedCommand } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'selectedCommand',
-      message: chalk.cyan(`${selectedCategory} - Select command:`),
-      choices: [
-        ...commands.map(cmd => ({
-          name: `${chalk.cyan(cmd.name.padEnd(12))} ${chalk.gray(cmd.desc)}`,
-          value: cmd.cmd,
-          short: cmd.name
-        })),
-        new inquirer.Separator(),
-        { name: chalk.gray('⬅  Back'), value: 'back', short: 'back' }
-      ]
-    }
-  ]);
+  const selectedCommand = await select({
+    message: chalk.cyan(`${selectedCategory} - Select command:`),
+    choices: [
+      ...commands.map(cmd => ({
+        name: `${chalk.cyan(cmd.name.padEnd(12))} ${chalk.gray(cmd.desc)}`,
+        value: cmd.cmd
+      })),
+      { name: chalk.gray('⏴ Back'), value: 'back' }
+    ]
+  });
 
   if (selectedCommand === 'back') {
-    return showInteractiveMenu(); // Go back to category selection
+    return showInteractiveMenu();
   }
 
   return selectedCommand;
@@ -156,35 +173,25 @@ async function showInteractiveMenu() {
 async function getCommandWithArgs(command: string): Promise<string | null> {
   switch (command) {
     case 'add':
-      const { name: addName, value: addValue } = await inquirer.prompt([
-        { type: 'input', name: 'name', message: 'Secret name:', validate: (v) => v.length > 0 || 'Name is required' },
-        { type: 'input', name: 'value', message: 'Secret value (or press Enter to input):' }
-      ]);
+      const addName = await input({ message: 'Secret name:' });
+      const addValue = await input({ message: 'Secret value (or press Enter to input):' });
       if (!addValue) {
-        const { secretValue } = await inquirer.prompt([
-          { type: 'password', name: 'secretValue', message: 'Enter secret value:', mask: '•' }
-        ]);
-        return `add ${addName} "${secretValue}"`;
+        // Use password input for secret value
+        return `add ${addName}`;
       }
       return `add ${addName} "${addValue}"`;
 
     case 'get':
-      const { name: getName } = await inquirer.prompt([
-        { type: 'input', name: 'name', message: 'Secret name to retrieve:', validate: (v) => v.length > 0 || 'Name is required' }
-      ]);
+      const getName = await input({ message: 'Secret name to retrieve:' });
       return `get ${getName}`;
 
     case 'remove':
-      const { name: removeName } = await inquirer.prompt([
-        { type: 'input', name: 'name', message: 'Secret name to remove:', validate: (v) => v.length > 0 || 'Name is required' }
-      ]);
+      const removeName = await input({ message: 'Secret name to remove:' });
       return `remove ${removeName}`;
 
     case 'restore':
-      const { name: restoreName, version } = await inquirer.prompt([
-        { type: 'input', name: 'name', message: 'Secret name to restore:', validate: (v) => v.length > 0 || 'Name is required' },
-        { type: 'input', name: 'version', message: 'Version (e.g., -1 for previous):', default: '-1' }
-      ]);
+      const restoreName = await input({ message: 'Secret name to restore:' });
+      const version = await input({ message: 'Version (e.g., -1 for previous):', default: '-1' });
       return `restore ${restoreName} --ver ${version}`;
 
     default:
@@ -207,37 +214,32 @@ async function startShell() {
 
   while (true) {
     try {
-      // First prompt with autocomplete
-      const { user_input } = await inquirer.prompt([
-        {
-          type: 'autocomplete',
-          name: 'user_input',
-          message: chalk.cyan('ssh-box'),
-          searchText: 'Searching',
-          prefix: '',
-          source: (_answers: any, input: string | undefined) => {
-            return Promise.resolve(searchCommands(input || ''));
-          },
-          pageSize: 10,
-          emptyText: ' ',
-          suggestOnly: true
+      // Use search prompt with autocomplete
+      const userInput: string = await search({
+        message: chalk.cyan('ssh-box'),
+        source: (term) => {
+          return Promise.resolve(searchCommands(term || ''));
         }
-      ]);
+      });
 
-      let input = user_input.trim();
+      console.log("Deepak::", userInput);
 
-      // If user pressed Enter without typing (empty input), show category menu
-      if (!input) {
-        // Empty input - show interactive menu
+      let input = userInput.trim();
+
+      // If user pressed Enter without typing or selected menu, show category menu
+      if (!input || input === '__MENU__') {
         let selectedCmd = await showInteractiveMenu();
         
-        while (selectedCmd === 'back') {
-          selectedCmd = await showInteractiveMenu();
-        }
+        // while (selectedCmd === 'back') {
+        //   selectedCmd = await showInteractiveMenu();
+        // }
         
         if (selectedCmd === 'exit') break;
         if (selectedCmd === 'help') {
           showHelp();
+          continue;
+        }
+        if (selectedCmd === 'back') {
           continue;
         }
         

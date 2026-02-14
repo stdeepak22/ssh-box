@@ -1,4 +1,4 @@
-import inquirer from 'inquirer';
+import { input, confirm } from '@inquirer/prompts';
 import ora from 'ora';
 import { getHelpr } from '../utils/shared-instance';
 
@@ -7,26 +7,19 @@ export async function removeSecret(name?: string) {
 
     // Prompt for name if not provided
     if (!secretName) {
-        const answer = await inquirer.prompt([{
-            type: 'input',
-            name: 'name',
+        secretName = await input({ 
             message: 'Secret name to remove:',
             validate: (input) => input.length > 0 || 'Name is required'
-        }]);
-        secretName = answer.name;
+        });
     }
 
     // Confirm deletion before making any API calls
-    const { confirm } = await inquirer.prompt([
-        {
-            type: 'confirm',
-            name: 'confirm',
-            message: `Are you sure you want to delete "${secretName}" and all its versions?`,
-            default: false
-        }
-    ]);
+    const shouldDelete = await confirm({
+        message: `Are you sure you want to delete "${secretName}" and all its versions?`,
+        default: false
+    });
 
-    if (!confirm) {
+    if (!shouldDelete) {
         console.log('Action cancelled.');
         return;
     }

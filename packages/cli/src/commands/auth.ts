@@ -1,17 +1,22 @@
-import inquirer from 'inquirer';
+import { input, password } from '@inquirer/prompts';
 import ora from 'ora';
 import chalk from 'chalk';
 import { helper, authStorage, getRelativeTime } from '../utils/shared-instance';
 
 export async function register() {
-    const { email, password } = await inquirer.prompt([
-        { type: 'input', name: 'email', message: '\tEmail:' },
-        { type: 'password', name: 'password', message: '\tPassword:' }
-    ]);
+    const email = await input({ 
+        message: 'Email:',
+        validate: (input) => input.length > 0 || 'Email is required'
+    });
+    const pass = await password({ 
+        message: 'Password:', 
+        mask: '*',
+        validate: (input) => input.length > 0 || 'Password is required'
+    });
 
     const spinner = ora('Registering...').start();
     try {
-        const res = await helper.registerNewAccount(email, password);
+        const res = await helper.registerNewAccount(email, pass);
         if(!res?.success)
         {
             spinner.fail(res?.error);
@@ -31,14 +36,19 @@ export async function login() {
         return;
     }
 
-    const { email, password } = await inquirer.prompt([
-        { type: 'input', name: 'email', message: 'Email:' },
-        { type: 'password', name: 'password', message: 'Password:' }
-    ]);
+    const email = await input({ 
+        message: 'Email:',
+        validate: (input) => input.length > 0 || 'Email is required'
+    });
+    const pass = await password({ 
+        message: 'Password:', 
+        mask: '*',
+        validate: (input) => input.length > 0 || 'Password is required'
+    });
 
     const spinner = ora('Logging in...').start();
     try {
-        const res = await helper.login(email, password);
+        const res = await helper.login(email, pass);
         if(res?.success){
             authStorage.setConfigProps(res.data!);
             spinner.succeed(chalk.green('Logged in successfully!'));
@@ -81,10 +91,12 @@ export async function unlockVault() {
         ora('Master Password not set. Please set it using "set-master" command.').fail();
         return;
     }
-    const { password } = await inquirer.prompt([
-        { type: 'password', name: 'password', message: 'Enter Master Password to unlock:', mask: '*' }
-    ]);
-    const hasUnlocked = await helper.unlockVault(password);
+    const pass = await password({ 
+        message: 'Enter Master Password to unlock:', 
+        mask: '*',
+        validate: (input) => input.length > 0 || 'Master password is required'
+    });
+    const hasUnlocked = await helper.unlockVault(pass);
     if (hasUnlocked) {
         ora('Master Password verified. Vault is unlocked 🔓').succeed();
         return;
