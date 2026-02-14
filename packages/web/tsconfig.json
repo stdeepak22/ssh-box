@@ -26,9 +26,9 @@
       "@/*": [
         "./src/*"
       ],
-      "@ssh-box/common": [
-        "../common/src/index.ts"
-      ]
+      // "@ssh-box/common": [
+      //   "../common/src/index.ts"
+      // ]
     }
   },
   "include": [

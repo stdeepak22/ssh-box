@@ -1,6 +1,6 @@
 {
   "name": "@ssh-box/zero-vault",
-  "version": "1.0.0-dev.270",
+  "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",

@@ -4,13 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 8080",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@ssh-box/common": "*",
+    "@ssh-box/common_types": "*",
     "axios": "^1.6.0",
     "idb": "^8.0.3",
     "next": "15.1.6",
