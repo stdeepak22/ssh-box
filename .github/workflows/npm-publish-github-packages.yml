@@ -32,9 +32,10 @@ jobs:
           registry-url: https://npm.pkg.github.com/
           scope: '@ssh-box'
       - run: npm ci
-      # Publish only the CLI package
-      - name: Publish CLI
+      - name: Build common packages
+        run: npm run build-common
+      - name: Publish only CLI
         run: npm publish
-        working-directory: ./packages/cli # Adjust this path to your CLI folder
+        working-directory: ./packages/cli
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
